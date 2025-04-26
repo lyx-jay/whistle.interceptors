@@ -1,1 +1,1 @@
-# whistle.easy-mock
+# whistle.interceptors

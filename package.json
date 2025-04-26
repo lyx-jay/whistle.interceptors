@@ -1,7 +1,7 @@
 {
-  "name": "whistle.easy-mock",
+  "name": "whistle.interceptors",
   "version": "0.0.1",
-  "description": "更灵活的mock数据",
+  "description": "flexible interception requests",
   "author": {
     "name": "lvyuanxin",
     "email": "lyxjay1005@163.com"
