@@ -1,6 +1,6 @@
 {
   "name": "whistle.interceptors",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "flexible interception requests",
   "author": {
     "name": "lvyuanxin",

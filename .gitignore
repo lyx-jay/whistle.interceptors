@@ -64,3 +64,4 @@ typings/
 .console.log
 
 packages/whistle.interceptors/dist
+packages/whistle.interceptors/public
