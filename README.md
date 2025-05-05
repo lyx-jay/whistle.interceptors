@@ -1,29 +1,60 @@
 # whistle.interceptors
 
-一个用于灵活拦截和模拟HTTP请求的whistle插件。
+一个用于灵活拦截和模拟HTTP请求的whistle插件，提供可视化配置界面。
 
 ## 功能特点
 
-- 基于请求体参数的动态Mock能力
-- 简单易用的配置规则
+- 支持请求体参数或查询参数的动态Mock能力
+- 支持GET和POST请求的拦截
+- 提供两种匹配模式：
+  - 与（AND）模式：所有条件都满足时触发mock
+  - 或（OR）模式：任一条件满足时触发mock
+- 可视化配置界面，方便管理多个规则
+- JSON格式响应编辑器
+- 规则搜索和管理功能
 
 ## 安装
 
 ```bash
-npm install -g whistle.interceptors
+w2 install whistle.interceptors
 ```
 
+## 使用方法
 
-## 配置示例
-
+1. 在whistle中添加规则：
 ```
-test.example.cn/api interceptors:// @userid=001&file=res.json
-```
-
-当匹配到test.example.cn/api请求时，如果请求体中参数userid=001，则返回res.json文件中的内容。
-
-```
-test.example.cn/api interceptors:// @userid=001&file=res.json|userid=002&file=res2.json
+pattern interceptors://@ruleId=001
 ```
 
-当匹配到test.example.cn/api请求时，如果请求体中参数userid=001，则返回res.json文件中的内容；如果请求体中参数userid=002，则返回res2.json文件中的内容。
+2. 访问配置页面：
+- 打开whistle管理页面
+- 点击Plugins标签
+- 找到interceptors插件并点击进入配置界面
+
+3. 创建规则：
+- 点击"添加规则"按钮
+- 设置规则名称和ID
+- 选择请求方式（GET/POST）
+- 选择匹配模式（与/或）
+- 添加匹配条件和对应的响应内容
+
+## 示例
+
+比如要拦截以下请求：
+```
+GET /api/user?userId=001
+```
+
+可以创建规则：
+1. 设置请求方式为 GET
+2. 添加条件：key=userId, value=001
+3. 设置对应的响应内容
+4. 在whistle中配置：`example.com/api/user interceptors://@ruleId=your_rule_id`
+
+当请求满足条件时，将返回配置的响应内容。
+
+## 源码
+
+本项目采用 monorepo 结构，包含以下部分：
+- packages/frontend: 可视化配置界面
+- packages/whistle.interceptors: whistle 插件核心逻辑

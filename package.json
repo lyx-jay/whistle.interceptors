@@ -1,7 +1,7 @@
 {
-  "name": "whistle.easy-mock",
+  "name": "whistle.interceptors",
   "private": true,
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "flexible interception requests",
   "author": {
     "name": "lvyuanxin",
