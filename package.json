@@ -1,18 +1,20 @@
 {
   "name": "whistle.interceptors",
-  "version": "0.0.2",
+  "private": true,
+  "version": "0.0.3",
   "description": "flexible interception requests",
   "author": {
     "name": "lvyuanxin",
     "email": "lyxjay1005@163.com"
   },
   "scripts": {
-    "dev": "tsup src/server.ts --watch",
-    "build": "tsup src/server.ts --minify"
+    "build": "pnpm run build:fronted && pnpm run build:whistle",
+    "build:whistle": "pnpm -F whistle.interceptors run build",
+    "build:fronted": "pnpm -F fronted run build",
+    "dev:fronted": "pnpm -F fronted run dev",
+    "dev:server": "pnpm -F whistle.interceptors run dev"
   },
   "devDependencies": {
-    "@types/node": "^22.15.2",
-    "tsup": "^8.0.0",
     "typescript": "^4.6.2"
   }
 }
