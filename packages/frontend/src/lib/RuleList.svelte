@@ -4,6 +4,8 @@
 
   let showAddDialog = false;
   let newRuleName = '';
+  let newRuleId = '';
+  let errorMessage = '';
   let searchQuery = '';
 
   export let selectedRule: Rule | null = null;
@@ -11,21 +13,28 @@
   function openAddDialog() {
     showAddDialog = true;
     newRuleName = '';
+    newRuleId = '';
+    errorMessage = '';
   }
 
   function closeAddDialog() {
     showAddDialog = false;
+    errorMessage = '';
   }
 
   function addRule() {
     if (!newRuleName.trim()) return;
-    ruleStore.addRule(newRuleName);
-    closeAddDialog();
+    try {
+      ruleStore.addRule(newRuleName, newRuleId.trim() || undefined);
+      closeAddDialog();
+    } catch (error) {
+      // @ts-ignore
+      errorMessage = error.message;
+    }
   }
 
   function saveRules() {
     ruleStore.saveRules();
-    alert('保存成功！');
   }
 
   function selectRule(rule: Rule) {
@@ -41,6 +50,8 @@
     rules = state.rules;
     selectedRule = state.selectedRule;
   });
+
+  ruleStore.getRulesList()
 
   $: filteredRules = searchQuery
     ? rules.filter(rule =>
@@ -88,6 +99,15 @@
         placeholder="请输入规则名称"
         bind:value={newRuleName}
       />
+      <input
+        type="text"
+        class="dialog-input"
+        placeholder="请输入规则ID"
+        bind:value={newRuleId}
+      />
+      {#if errorMessage}
+        <div class="error-message">{errorMessage}</div>
+      {/if}
       <div class="dialog-buttons">
         <button class="dialog-btn cancel-btn" on:click={closeAddDialog}>取消</button>
         <button class="dialog-btn confirm-btn" on:click={addRule}>确定</button>
@@ -153,7 +173,6 @@
 
   .name {
     font-weight: bold;
-    margin-bottom: 0.5rem;
   }
 
   .id {
@@ -235,7 +254,7 @@
   .dialog-input {
     width: 100%;
     padding: 0.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     border: 1px solid #333;
     border-radius: 4px;
     background-color: #1a1a1a;
@@ -272,5 +291,15 @@
 
   .confirm-btn:hover {
     background: #40a9ff;
+  }
+
+  .error-message {
+    color: #ff4d4f;
+    padding: 8px;
+    margin: 8px 0;
+    background-color: rgba(255, 77, 79, 0.1);
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
   }
 </style>

@@ -1,3 +1,9 @@
+declare module 'koa' {
+  interface DefaultContext {
+    storage: Whistle.Storage
+  }
+}
+
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 // import onerror from 'koa-onerror';
@@ -10,10 +16,13 @@ import setupRouter from './router';
 
 const MAX_AGE = 1000 * 60 * 5;
 
+
 export default (server: Whistle.PluginServer, options: Whistle.PluginOptions) => {
   
   const app = new Koa();
-  app.context.storage = options.storage
+
+  app.context.storage = options.storage;
+
   app.proxy = true;
   app.silent = true;
   app.use(

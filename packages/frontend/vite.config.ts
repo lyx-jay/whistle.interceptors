@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [svelte()],
   build: {
     outDir: '../whistle.interceptors/public',
-    emptyOutDir: true
+    emptyOutDir: true,
   },
   base: './'
 })

@@ -42,42 +42,92 @@ __export(server_exports, {
   default: () => server_default
 });
 module.exports = __toCommonJS(server_exports);
-var EXCLUDE_RULES = ["file"];
-function handleGlobalValue(globalValue) {
-  const rules = globalValue.split("|").map((rule) => {
-    const ruleMap = /* @__PURE__ */ new Map();
-    const pairs = rule.split("&");
-    pairs.forEach((pair) => {
-      const [key, value] = pair.split("=");
-      ruleMap.set(key, value);
-    });
-    return ruleMap;
+
+// src/uiServer/constant.ts
+var LOCAL_PREFIX = "whistle.interceptors";
+
+// src/server.ts
+function parseQuery(queryString) {
+  const params = {};
+  const query = queryString.startsWith("?") ? queryString.substring(1) : queryString;
+  query.split("&").forEach((item) => {
+    const [key, value] = item.split("=");
+    if (key && value) {
+      params[decodeURIComponent(key)] = decodeURIComponent(value);
+    }
   });
-  return rules;
+  return params;
+}
+function getBody(req) {
+  return new Promise((resolve) => {
+    req.getReqSession((session) => {
+      resolve(JSON.parse(session.req.body));
+    });
+  });
+}
+function handleAndMode({ conditions, payload, res }) {
+  const isMatch = conditions.every((condition) => {
+    const { key, value } = condition;
+    return payload[key] && payload[key] === value;
+  });
+  if (!isMatch) {
+    return true;
+  }
+  res.setHeader("whistle-plugin", "whistle.interceptors");
+  res.setHeader("Content-Type", "application/json; charset=UTF-8");
+  res.end(conditions[0].response);
+}
+function handleOrMode({ conditions, payload, res }) {
+  const matchingCondition = conditions.find(
+    ({ key, value }) => payload[key] === value
+  );
+  if (!matchingCondition) {
+    return true;
+  }
+  res.setHeader("whistle-plugin", "whistle.interceptors");
+  res.setHeader("Content-Type", "application/json; charset=UTF-8");
+  res.end(matchingCondition.response);
+}
+function handleMatchMode({ matchType, conditions, payload, res, req }) {
+  const map = {
+    "and": handleAndMode,
+    "or": handleOrMode
+  };
+  const noMatch = map[matchType]({
+    conditions,
+    payload,
+    res
+  });
+  if (noMatch) {
+    req.passThrough();
+  }
 }
 var server_default = (server, options) => {
   server.on("request", (req, res) => __async(null, null, function* () {
-    if (req.method === "POST") {
-      req.on("data", (chunk) => {
-        const reqBody = JSON.parse(chunk.toString());
-        const rules = handleGlobalValue(req.originalReq.globalValue);
-        for (const ruleMap of rules) {
-          const isMatch = Array.from(ruleMap.entries()).every(([key, value]) => {
-            if (EXCLUDE_RULES.includes(key)) {
-              return true;
-            }
-            return reqBody[key] && reqBody[key] === value;
-          });
-          if (isMatch && ruleMap.has("file")) {
-            options.getValue(ruleMap.get("file"), (value) => {
-              res.end(value);
-              return;
-            });
-          }
-        }
+    try {
+      const id = req.originalReq.ruleValue;
+      const rules = JSON.parse(options.storage.getProperty(LOCAL_PREFIX)) || [];
+      const targetRule = rules.filter((rule) => rule.id === id)[0];
+      const { matchType, method, conditions } = targetRule.config;
+      if (req.method !== method) {
         req.passThrough();
+        return;
+      }
+      let payLoad;
+      if (method === "POST") {
+        payLoad = yield getBody(req);
+      }
+      if (method === "GET") {
+        payLoad = parseQuery(options.parseUrl(req.fullUrl).query);
+      }
+      handleMatchMode({
+        matchType,
+        conditions,
+        res,
+        req,
+        payload: payLoad
       });
-    } else {
+    } catch (error) {
       req.passThrough();
     }
   }));
