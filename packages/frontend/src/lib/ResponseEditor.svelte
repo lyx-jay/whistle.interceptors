@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { JSONEditor, type Content } from 'svelte-jsoneditor';
+  import { JSONEditor, type Content, Mode } from 'svelte-jsoneditor';
 
   export let showModal = false;
   export let content: Content = { json: {} };
+  export let mode: Mode = Mode.text;
 
   function closeModal() {
     showModal = false;
@@ -18,7 +19,7 @@
     <div class="modal response-editor-modal">
       <h2>编辑返回值</h2>
       <div class="editor-container response-editor">
-        <JSONEditor bind:content={content}/>
+        <JSONEditor bind:content={content} bind:mode={mode}/>
       </div>
       <div class="modal-actions">
         <button class="cancel-btn" on:click={closeModal}>取消</button>
