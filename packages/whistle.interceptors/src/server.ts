@@ -26,10 +26,13 @@ function getBody(req: Whistle.PluginServerRequest): Promise<Record<string, strin
   });
 }
 
-function handleAndMode({conditions, payload, res}: {
+function handleAndMode({conditions, payload, res, extra}: {
   conditions: Rule['config']['conditions'],
   payload: Record<string, string>,
-  res: Whistle.PluginServerResponse
+  res: Whistle.PluginServerResponse,
+  extra: {
+    origin: string
+  }
 }) {
   const isMatch = conditions.every((condition) => {
     const { key, value } = condition
@@ -42,14 +45,21 @@ function handleAndMode({conditions, payload, res}: {
 
   res.setHeader('whistle-plugin', 'whistle.interceptors');
   res.setHeader('Content-Type', 'application/json; charset=UTF-8');
+  res.setHeader('Access-Control-Allow-Origin', extra.origin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+  res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS,PUT,DELETE,HEAD')
   res.end(conditions[0].response)
 
 }
 
-function handleOrMode({conditions, payload, res}: {
+function handleOrMode({conditions, payload, res, extra}: {
   conditions: Rule['config']['conditions'],
   payload: Record<string, string>,
-  res: Whistle.PluginServerResponse
+  res: Whistle.PluginServerResponse,
+  extra: {
+    origin: string
+  }
 }) {
   const matchingCondition = conditions.find(
     ({ key, value }) => payload[key] === value
@@ -58,9 +68,13 @@ function handleOrMode({conditions, payload, res}: {
   if (!matchingCondition) {
     return true
   }
-
+  
   res.setHeader('whistle-plugin', 'whistle.interceptors');
   res.setHeader('Content-Type', 'application/json; charset=UTF-8');
+  res.setHeader('Access-Control-Allow-Origin', extra.origin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+  res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS,PUT,DELETE,HEAD')
   res.end(matchingCondition.response);
 
 }
@@ -76,11 +90,14 @@ function handleMatchMode({matchType, conditions, payload, res, req}: {
     'and': handleAndMode,
     'or': handleOrMode
   }
-
+  
   const noMatch = map[matchType]({
     conditions,
     payload,
-    res
+    res,
+    extra: {
+      origin: req.headers.origin
+    }
   })
 
   if (noMatch) {
@@ -90,6 +107,7 @@ function handleMatchMode({matchType, conditions, payload, res, req}: {
 
 
 export default (server: Whistle.PluginServer, options: Whistle.PluginOptions) => {
+  
   server.on('request', async (req: Whistle.PluginServerRequest, res: Whistle.PluginServerResponse) => {
 
     try {
@@ -124,32 +142,6 @@ export default (server: Whistle.PluginServer, options: Whistle.PluginOptions) =>
     } catch (error) {
       req.passThrough();
     }
-
-
-    // if (matchType === "or") {
-    //   const matchingCondition = conditions.find(
-    //     ({ key, value }) => payLoad[key] === value
-    //   );
-    //   if (matchingCondition) {
-    //     res.setHeader('whistle-plugin', 'whistle.interceptors');
-    //     res.setHeader('Content-Type', 'application/json; charset=UTF-8');
-    //     res.end(matchingCondition.response);
-    //     return;
-    //   }
-    // }
-    // if (matchType === 'and') {
-    //   const isMatch = conditions.every((condition) => {
-    //     const { key, value } = condition
-    //     return payLoad[key] && payLoad[key] === value
-    //   })
-    //   if (isMatch) {
-    //     res.setHeader('whistle-plugin', 'whistle.interceptors');
-    //     res.setHeader('Content-Type', 'application/json; charset=UTF-8');
-    //     res.end(conditions[0].response)
-    //     return
-    //   }
-    // }
-
   });
 
   // handle websocket request

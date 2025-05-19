@@ -11,10 +11,9 @@ export default (router: Router) => {
   router.get(apis.get, (ctx: RouterContext) => {
     try {
       const data = ctx.storage.getProperty(LOCAL_PREFIX);
-      console.log('get data', data)
       ctx.body = {
         result: 'ok',
-        data: JSON.parse(data)
+        data: data ? JSON.parse(data) : []
       }
     } catch (error) {
       ctx.body = {

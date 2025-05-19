@@ -71,6 +71,7 @@ const createRuleStore = () => {
           }
           return rule;
         });
+        console.log('[info: 68]:', { rules })
         const selectedRule = store.selectedRule?.id === ruleId 
           ? { ...store.selectedRule, config }
           : store.selectedRule;

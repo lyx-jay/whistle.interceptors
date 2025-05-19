@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Content, JSONContent } from 'svelte-jsoneditor';
+  import { Mode, type Content, type JSONContent, type TextContent } from 'svelte-jsoneditor';
   import ResponseEditor from './ResponseEditor.svelte';
   import { ruleStore } from './stores/rules';
   import type { Rule } from './types';
@@ -7,24 +7,32 @@
   export let selectedRule: Rule | null = null;
   let showResponseEditor = false;
   let editingConditionIndex = -1;
-  let responseContent: Content = { json: {} } as JSONContent;
+  let responseContent: Content = { text: '' } as TextContent;
+  let mode: Mode = Mode.text;
 
   function openResponseEditor(index: number) {
     editingConditionIndex = index;
-    try {
+    if (mode === Mode.tree) {
+      try {
+        responseContent = {
+          json: selectedRule?.config.conditions[index].response ? JSON.parse(selectedRule.config.conditions[index].response) : {}
+        } as JSONContent;
+      } catch (e) {
+        responseContent = { json: {} } as JSONContent;
+      }
+    } else {
       responseContent = {
-        json: selectedRule?.config.conditions[index].response ? JSON.parse(selectedRule.config.conditions[index].response) : {}
-      } as JSONContent;
-    } catch (e) {
-      responseContent = { json: {} } as JSONContent;
+        text: selectedRule?.config.conditions[index].response || ''
+      } as TextContent;
     }
     showResponseEditor = true;
   }
 
   $: if (showResponseEditor === false && editingConditionIndex >= 0 && selectedRule) {
     const config = { ...selectedRule.config };
-    config.conditions[editingConditionIndex].response = JSON.stringify((responseContent as JSONContent).json);
-    console.log('[info: 27]:', { config });
+    // @ts-ignore
+    config.conditions[editingConditionIndex].response = mode === Mode.text ? responseContent.text : JSON.stringify(responseContent.json);
+    console.log('[info: 27]:', editingConditionIndex, responseContent, config, mode);
     ruleStore.updateRuleConfig(selectedRule.id, config);
     editingConditionIndex = -1;
   }
@@ -143,6 +151,7 @@
       </div>
 
       <ResponseEditor
+        bind:mode={mode}
         bind:showModal={showResponseEditor}
         bind:content={responseContent}
       />

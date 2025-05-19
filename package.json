@@ -11,6 +11,7 @@
     "build": "pnpm run build:fronted && pnpm run build:whistle",
     "build:whistle": "pnpm -F whistle.interceptors run build",
     "build:fronted": "pnpm -F fronted run build",
+    "build:fronted:watch": "pnpm -F fronted run build:watch",
     "dev:fronted": "pnpm -F fronted run dev",
     "dev:server": "pnpm -F whistle.interceptors run dev"
   },
