@@ -1,8 +1,8 @@
 <script lang="ts">
-  import RuleList from './RuleList.svelte';
-  import RuleDetail from './RuleDetail.svelte';
-  import type { Rule } from './types';
-  import { ruleStore } from './stores/rules';
+  import RuleList from '@/lib/RuleList.svelte';
+  import RuleDetail from '@/lib/RuleDetail.svelte';
+  import type { Rule } from '@/lib/types';
+  import { ruleStore } from '@/lib/stores/rules';
 
   let selectedRule: Rule | null = null;
   ruleStore.subscribe(state => {

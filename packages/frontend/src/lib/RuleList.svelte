@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { Rule } from './types';
-  import { ruleStore } from './stores/rules';
+  import type { Rule } from '@/lib/types';
+  import { ruleStore } from '@/lib/stores/rules';
 
   let showAddDialog = false;
   let newRuleName = '';

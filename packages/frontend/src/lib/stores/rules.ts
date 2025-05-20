@@ -1,6 +1,7 @@
 import { writable, get } from 'svelte/store';
-import type { Rule } from '../types';
-import { addRuleCollections, getRuleCollections } from '../../api';
+import type { Rule } from '@/lib/types';
+import { addRuleCollections, getRuleCollections } from '@/api';
+import { toast } from '../utils/toast';
 
 type RuleStore = {
   rules: Rule[];
@@ -71,15 +72,15 @@ const createRuleStore = () => {
           }
           return rule;
         });
-        console.log('[info: 68]:', { rules })
+        // console.log('[info: 68]:', { rules })
         const selectedRule = store.selectedRule?.id === ruleId 
           ? { ...store.selectedRule, config }
           : store.selectedRule;
-        console.log('[info: 68]:', {
-          ...store,
-          rules,
-          selectedRule
-        })
+        // console.log('[info: 68]:', {
+        //   ...store,
+        //   rules,
+        //   selectedRule
+        // })
         return {
           ...store,
           rules,
@@ -88,17 +89,20 @@ const createRuleStore = () => {
       });
     },
     saveRules: async () => {
+      // toast.error('保存成功');
       const currentStore = get(store);
-      console.log('Current rules:', currentStore.rules);
-      
+      // console.log('Current rules:', currentStore.rules);
+
       try {
         await addRuleCollections(currentStore.rules);
         update(store => ({
           ...store,
           originalRules: [...store.rules]
         }));
+        toast.success('保存成功');
         console.log('Rules saved successfully');
       } catch (error) {
+        toast.error('保存失败');
         console.error('Failed to save rules:', error);
       }
     },
@@ -116,7 +120,7 @@ const createRuleStore = () => {
     },
     getRulesList: async () => {
       const rulesList = await getRuleCollections()
-      console.log('[info: 110]:', { rulesList })
+      // console.log('[info: 110]:', { rulesList })
       update(store => ({
         ...store,
         rules: rulesList.data

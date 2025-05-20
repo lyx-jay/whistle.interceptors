@@ -1,5 +1,22 @@
 <script lang="ts">
-  import Rules from './lib/Rules.svelte'
+  import Rules from '@/lib/Rules.svelte'
+  import { ruleStore } from '@/lib/stores/rules'
+  import { onMount } from 'svelte'
+
+  onMount(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault() // 阻止浏览器默认的保存行为
+        ruleStore.saveRules()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeydown)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeydown)
+    }
+  })
 </script>
 
 <main>

@@ -1,9 +1,9 @@
 <script lang="ts">
   import { Mode, type Content, type JSONContent, type TextContent } from 'svelte-jsoneditor';
-  import ResponseEditor from './ResponseEditor.svelte';
-  import { ruleStore } from './stores/rules';
-  import type { Rule } from './types';
-  import Switch from './components/Switch.svelte';
+  import ResponseEditor from '@/lib/ResponseEditor.svelte';
+  import { ruleStore } from '@/lib/stores/rules';
+  import type { Rule } from '@/lib/types';
+  import Switch from '@/lib/components/Switch.svelte';
   
   export let selectedRule: Rule | null = null;
   let showResponseEditor = false;
