@@ -8,6 +8,8 @@ export interface Rule {
       key: string;
       value: string;
       response: string;
+      enabled?: boolean;
+      remark?: string;
     }[];
   };
 }

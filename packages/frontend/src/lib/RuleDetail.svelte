@@ -3,6 +3,7 @@
   import ResponseEditor from './ResponseEditor.svelte';
   import { ruleStore } from './stores/rules';
   import type { Rule } from './types';
+  import Switch from './components/Switch.svelte';
   
   export let selectedRule: Rule | null = null;
   let showResponseEditor = false;
@@ -40,7 +41,7 @@
   function addCondition() {
     if (!selectedRule) return;
     const config = { ...selectedRule.config };
-    config.conditions = [...config.conditions, { key: '', value: '', response: '' }];
+    config.conditions = [...config.conditions, { key: '', value: '', response: '', enabled: true, remark: '' }];
     ruleStore.updateRuleConfig(selectedRule.id, config);
   }
 
@@ -106,43 +107,69 @@
               <legend>匹配条件</legend>
               {#each selectedRule.config.conditions as condition, i}
                 <div class="condition-row" role="group" aria-labelledby="conditions-label">
-                  <input
-                    type="text"
-                    class="form-input condition-input"
-                    placeholder="Key"
-                    bind:value={condition.key}
-                    on:input={() => {
+                  <Switch
+                    size="small"
+                    bind:checked={condition.enabled}
+                    on:click={() => {
                       if (selectedRule) {
                         const config = { ...selectedRule.config };
                         ruleStore.updateRuleConfig(selectedRule.id, config);
                       }
                     }}
                   />
-                  <input
-                    type="text"
-                    class="form-input condition-input"
-                    placeholder="Value"
-                    bind:value={condition.value}
-                    on:input={() => {
-                      if (selectedRule) {
-                        const config = { ...selectedRule.config };
-                        ruleStore.updateRuleConfig(selectedRule.id, config);
-                      }
-                    }}
-                  />
-                  <button
-                    class="edit-response-btn"
-                    on:click={() => openResponseEditor(i)}
-                  >
-                    编辑返回值
-                  </button>
-                  <button
-                    class="remove-btn"
-                    on:click={() => removeCondition(i)}
-                    disabled={selectedRule.config.conditions.length === 1}
-                  >
-                    删除
-                  </button>
+                  <div class="condition-inputs">
+                    <input
+                      type="text"
+                      class="form-input condition-input"
+                      placeholder="Key"
+                      bind:value={condition.key}
+                      on:input={() => {
+                        if (selectedRule) {
+                          const config = { ...selectedRule.config };
+                          ruleStore.updateRuleConfig(selectedRule.id, config);
+                        }
+                      }}
+                    />
+                    <input
+                      type="text"
+                      class="form-input condition-input"
+                      placeholder="Value"
+                      bind:value={condition.value}
+                      on:input={() => {
+                        if (selectedRule) {
+                          const config = { ...selectedRule.config };
+                          ruleStore.updateRuleConfig(selectedRule.id, config);
+                        }
+                      }}
+                    />
+                    <input
+                      type="text"
+                      class="form-input remark-input"
+                      placeholder="备注"
+                      bind:value={condition.remark}
+                      on:input={() => {
+                        if (selectedRule) {
+                          const config = { ...selectedRule.config };
+                          ruleStore.updateRuleConfig(selectedRule.id, config);
+                        }
+                      }}
+                    />
+                  </div>
+                  <div class="condition-actions">
+                    <button
+                      class="edit-response-btn"
+                      on:click={() => openResponseEditor(i)}
+                    >
+                      编辑返回值
+                    </button>
+                    <button
+                      class="remove-btn"
+                      on:click={() => removeCondition(i)}
+                      disabled={selectedRule.config.conditions.length === 1}
+                    >
+                      删除
+                    </button>
+                  </div>
                 </div>
               {/each}
             </fieldset>
@@ -260,9 +287,25 @@
     align-items: center;
   }
 
-  .condition-row .form-input {
+  .condition-inputs {
+    display: flex;
     flex: 1;
-    margin-right: 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .condition-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  .condition-input {
+    width: 200px;
+  }
+
+  .remark-input {
+    flex: 1;
   }
 
   .remove-btn {

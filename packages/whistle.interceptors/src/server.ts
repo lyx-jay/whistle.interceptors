@@ -35,8 +35,8 @@ function handleAndMode({conditions, payload, res, extra}: {
   }
 }) {
   const isMatch = conditions.every((condition) => {
-    const { key, value } = condition
-    return payload[key] && payload[key] === value
+    const { key, value, enabled } = condition
+    return enabled && payload[key] && payload[key] === value
   })
 
   if (!isMatch) {
@@ -62,7 +62,7 @@ function handleOrMode({conditions, payload, res, extra}: {
   }
 }) {
   const matchingCondition = conditions.find(
-    ({ key, value }) => payload[key] === value
+    ({ key, value, enabled }) => enabled && payload[key] === value
   );
 
   if (!matchingCondition) {
