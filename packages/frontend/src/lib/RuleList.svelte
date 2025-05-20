@@ -8,8 +8,6 @@
   let errorMessage = '';
   let searchQuery = '';
 
-  export let selectedRule: Rule | null = null;
-
   function openAddDialog() {
     showAddDialog = true;
     newRuleName = '';
@@ -46,6 +44,7 @@
   }
 
   let rules: Rule[] = [];
+  let selectedRule: Rule | null = null;
   ruleStore.subscribe(state => {
     rules = state.rules;
     selectedRule = state.selectedRule;

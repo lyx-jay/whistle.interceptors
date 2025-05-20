@@ -5,11 +5,18 @@
   import type { Rule } from '@/lib/types';
   import Switch from '@/lib/components/Switch.svelte';
   
-  export let selectedRule: Rule | null = null;
+  // export let selectedRule: Rule | null = null;
   let showResponseEditor = false;
   let editingConditionIndex = -1;
   let responseContent: Content = { text: '' } as TextContent;
   let mode: Mode = Mode.text;
+
+  // let rules: Rule[] = [];
+  let selectedRule: Rule | null = null;
+  ruleStore.subscribe(state => {
+    // rules = state.rules;
+    selectedRule = state.selectedRule;
+  });
 
   function openResponseEditor(index: number) {
     editingConditionIndex = index;
