@@ -37,7 +37,7 @@ const createRuleStore = () => {
           config: {
             method: 'GET',
             matchType: 'and',
-            conditions: [{ key: '', value: '', response: '' }]
+            conditions: [],
           }
         };
         return {

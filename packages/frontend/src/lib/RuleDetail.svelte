@@ -1,54 +1,63 @@
 <script lang="ts">
-  import { Mode, type Content, type JSONContent, type TextContent } from 'svelte-jsoneditor';
-  import ResponseEditor from '@/lib/ResponseEditor.svelte';
-  import { ruleStore } from '@/lib/stores/rules';
-  import type { Rule } from '@/lib/types';
-  import Switch from '@/lib/components/Switch.svelte';
-  
+  import {
+    Mode,
+    type Content,
+    type JSONContent,
+    type TextContent,
+  } from "svelte-jsoneditor";
+  import ResponseEditor from "@/lib/ResponseEditor.svelte";
+  import { ruleStore } from "@/lib/stores/rules";
+  import type { Rule } from "@/lib/types";
+  import Switch from "@/lib/components/Switch.svelte";
+  import Select from "@/lib/components/Select.svelte";
+  import { LOCAL_PREFIX, PROXY_MODE } from "./context";
+  import { notifyMessage } from "@/api";
+
   // export let selectedRule: Rule | null = null;
   let showResponseEditor = false;
   let editingConditionIndex = -1;
-  let responseContent: Content = { text: '' } as TextContent;
+  let responseContent: Content = { text: "" } as TextContent;
   let mode: Mode = Mode.text;
 
   // let rules: Rule[] = [];
-  let selectedRule: Rule | null = null;
-  ruleStore.subscribe(state => {
-    // rules = state.rules;
-    selectedRule = state.selectedRule;
-  });
+  // 监听 selectedRule
+  $: selectedRule = $ruleStore.selectedRule;
 
   function openResponseEditor(index: number) {
     editingConditionIndex = index;
     if (mode === Mode.tree) {
       try {
         responseContent = {
-          json: selectedRule?.config.conditions[index].response ? JSON.parse(selectedRule.config.conditions[index].response) : {}
+          json: selectedRule?.config.conditions[index].response
+            ? JSON.parse(selectedRule.config.conditions[index].response)
+            : {},
         } as JSONContent;
       } catch (e) {
         responseContent = { json: {} } as JSONContent;
       }
     } else {
       responseContent = {
-        text: selectedRule?.config.conditions[index].response || ''
+        text: selectedRule?.config.conditions[index].response || "",
       } as TextContent;
     }
     showResponseEditor = true;
   }
 
-  $: if (showResponseEditor === false && editingConditionIndex >= 0 && selectedRule) {
-    const config = { ...selectedRule.config };
-    // @ts-ignore
-    config.conditions[editingConditionIndex].response = mode === Mode.text ? responseContent.text : JSON.stringify(responseContent.json);
-    console.log('[info: 27]:', editingConditionIndex, responseContent, config, mode);
-    ruleStore.updateRuleConfig(selectedRule.id, config);
-    editingConditionIndex = -1;
-  }
-
   function addCondition() {
     if (!selectedRule) return;
     const config = { ...selectedRule.config };
-    config.conditions = [...config.conditions, { key: '', value: '', response: '', enabled: true, remark: '' }];
+    config.conditions = [
+      ...config.conditions,
+      {
+        key: "",
+        value: "",
+        response: "",
+        enabled: true,
+        remark: "",
+        ruleId: selectedRule.id,
+        proxyMode: PROXY_MODE.NETWORK,
+      },
+    ];
     ruleStore.updateRuleConfig(selectedRule.id, config);
   }
 
@@ -61,20 +70,76 @@
 
   function updateMethod(method: string) {
     if (!selectedRule) return;
-    const config = { 
-      ...selectedRule.config, 
-      method: method.toUpperCase() as Rule['config']['method']
+    const config = {
+      ...selectedRule.config,
+      method: method.toUpperCase() as Rule["config"]["method"],
     };
-    config.conditions = [{ key: '', value: '', response: '' }];
+    config.conditions = [
+      {
+        key: "",
+        value: "",
+        response: "",
+        ruleId: selectedRule.id,
+        proxyMode: PROXY_MODE.NETWORK,
+      },
+    ];
     ruleStore.updateRuleConfig(selectedRule.id, config);
   }
 
-  function updateMatchType(matchType: 'and' | 'or') {
+  function updateMatchType(matchType: "and" | "or") {
     if (!selectedRule) return;
     const config = { ...selectedRule.config, matchType };
-    config.conditions = [{ key: '', value: '', response: '' }];
+    config.conditions = [
+      {
+        key: "",
+        value: "",
+        response: "",
+        ruleId: selectedRule.id,
+        proxyMode: PROXY_MODE.NETWORK,
+      },
+    ];
     ruleStore.updateRuleConfig(selectedRule.id, config);
   }
+
+  function handleResponseEditorSave() {
+    console.log("[info: 127]:", "保存编辑器并关闭");
+    if (editingConditionIndex >= 0 && selectedRule) {
+      const config = { ...selectedRule.config };
+      // @ts-ignore
+      config.conditions[editingConditionIndex].response =
+        mode === Mode.text
+          ? responseContent.text
+          : JSON.stringify(responseContent.json);
+      // console.log(
+      //   "[info: 27]:",
+      //   editingConditionIndex,
+      //   responseContent,
+      //   config,
+      //   mode,
+      // );
+      ruleStore.updateRuleConfig(selectedRule.id, config);
+      editingConditionIndex = -1;
+    }
+    showResponseEditor = false;
+  }
+
+  $: if (selectedRule) {
+    selectedRule.config.conditions.forEach((condition) => {
+      if (condition.proxyMode === PROXY_MODE.NETWORK && condition.enabled) {
+        console.log(
+          "发出 sse 请求",
+          `${LOCAL_PREFIX}_${condition.ruleId}_${condition.key}_${condition.value}`,
+        );
+        notifyMessage({
+          storage_prefix: `${LOCAL_PREFIX}_${condition.ruleId}_${condition.key}_${condition.value}`,
+        }).then((res) => {
+          condition.response = res;
+        });
+      }
+    });
+  }
+
+  // 监听sse
 </script>
 
 <div class="rule-detail">
@@ -82,9 +147,7 @@
     <div class="detail-layout">
       <div class="detail-section basic-info">
         <div class="section-content">
-          <button class="add-btn" on:click={addCondition}>
-            添加条件
-          </button>
+          <button class="add-btn" on:click={addCondition}> 添加条件 </button>
           <div class="form-group">
             <label for="requestMethod">请求方式</label>
             <select
@@ -103,7 +166,8 @@
               id="matchType"
               class="form-input select-input"
               value={selectedRule.config.matchType}
-              on:change={(e) => updateMatchType(e.currentTarget.value as 'and' | 'or')}
+              on:change={(e) =>
+                updateMatchType(e.currentTarget.value as "and" | "or")}
             >
               <option value="and">与（&）</option>
               <option value="or">或（|）</option>
@@ -113,7 +177,11 @@
             <fieldset>
               <legend>匹配条件</legend>
               {#each selectedRule.config.conditions as condition, i}
-                <div class="condition-row" role="group" aria-labelledby="conditions-label">
+                <div
+                  class="condition-row"
+                  role="group"
+                  aria-labelledby="conditions-label"
+                >
                   <Switch
                     size="small"
                     bind:checked={condition.enabled}
@@ -163,6 +231,21 @@
                     />
                   </div>
                   <div class="condition-actions">
+                    <Select
+                      options={[
+                        { value: "network", label: "网络模式" },
+                        { value: "mock", label: "mock模式" },
+                      ]}
+                      bind:value={condition.proxyMode}
+                      class_="mode-select"
+                      on:change={() => {
+                        if (selectedRule) {
+                          const config = { ...selectedRule.config };
+                          ruleStore.updateRuleConfig(selectedRule.id, config);
+                        }
+                      }}
+                      placeholder="选择模式"
+                    />
                     <button
                       class="edit-response-btn"
                       on:click={() => openResponseEditor(i)}
@@ -185,15 +268,15 @@
       </div>
 
       <ResponseEditor
-        bind:mode={mode}
+        bind:mode
         bind:showModal={showResponseEditor}
         bind:content={responseContent}
+        onClose={() => (showResponseEditor = false)}
+        onSave={handleResponseEditorSave}
       />
     </div>
   {:else}
-    <div class="no-selection">
-      选择一个规则查看详情
-    </div>
+    <div class="no-selection">选择一个规则查看详情</div>
   {/if}
 </div>
 
@@ -214,7 +297,6 @@
   .detail-section {
     background: #2a2a2a;
     border-radius: 8px;
-    overflow: hidden;
   }
 
   .section-content {
@@ -247,7 +329,6 @@
   }
 
   .form-input {
-    flex: 1;
     padding: 0.5rem;
     background-color: #2a2a2a;
     border: 1px solid #333;
@@ -306,16 +387,14 @@
     gap: 0.5rem;
     margin-left: auto;
   }
-
+  .remark-input,
   .condition-input {
     width: 200px;
-  }
-
-  .remark-input {
-    flex: 1;
+    border-color: gray;
   }
 
   .remove-btn {
+    flex-shrink: 0;
     padding: 0.5rem;
     background-color: #ff4d4f;
     border: none;
@@ -352,6 +431,7 @@
   }
 
   .edit-response-btn {
+    flex-shrink: 0;
     padding: 0.5rem;
     background-color: #1890ff;
     border: none;
