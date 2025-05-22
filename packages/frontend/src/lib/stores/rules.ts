@@ -35,8 +35,8 @@ const createRuleStore = () => {
           id: customId || String(currentRules.length + 1),
           name: name.trim(),
           config: {
-            method: 'GET',
-            matchType: 'and',
+            method: 'POST',
+            matchType: 'or',
             conditions: [],
           }
         };

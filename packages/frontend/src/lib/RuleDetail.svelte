@@ -77,36 +77,18 @@
 
   function updateMethod(method: string) {
     if (!selectedRule) return;
+    if (selectedRule.config.method === method) return;
     const config = {
       ...selectedRule.config,
       method: method.toUpperCase() as Rule["config"]["method"],
     };
-    config.conditions = [
-      {
-        key: "",
-        value: "",
-        response: "",
-        ruleId: selectedRule.id,
-        proxyMode: PROXY_MODE.NETWORK,
-        enabled: true
-      },
-    ];
     ruleStore.updateRuleConfig(selectedRule.id, config);
   }
 
   function updateMatchType(matchType: "and" | "or") {
     if (!selectedRule) return;
+    if (selectedRule.config.matchType === matchType) return;
     const config = { ...selectedRule.config, matchType };
-    config.conditions = [
-      {
-        key: "",
-        value: "",
-        response: "",
-        ruleId: selectedRule.id,
-        proxyMode: PROXY_MODE.NETWORK,
-        enabled: true
-      },
-    ];
     ruleStore.updateRuleConfig(selectedRule.id, config);
   }
 
@@ -228,8 +210,8 @@
               onchange={(e) =>
                 updateMatchType(e.currentTarget.value as "and" | "or")}
             >
-              <option value="and">与（&）</option>
-              <option value="or">或（|）</option>
+            <option value="or">或</option>
+            <!-- <option value="and">与（&）</option> -->
             </select>
           </div>
           <div class="conditions-container">
