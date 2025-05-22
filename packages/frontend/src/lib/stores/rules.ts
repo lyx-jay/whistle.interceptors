@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store';
-import type { Rule } from '@/lib/types';
+import type { Rule, RuleCondition } from '@/lib/types';
 import { addRuleCollections, getRuleCollections } from '@/api';
 import { toast } from '../utils/toast';
 
@@ -88,6 +88,30 @@ const createRuleStore = () => {
         };
       });
     },
+    updateRuleConfigCondition: ({
+      ruleId,
+      conditionIndex,
+      condition
+    }: {ruleId: string, conditionIndex: number, condition: RuleCondition}) => {
+      update(store => {
+        const rules = store.rules.map(rule => {
+          if (rule.id === ruleId) {
+            const conditions = [...rule.config.conditions];
+            conditions[conditionIndex] = condition;
+            return { ...rule, config: { ...rule.config, conditions } };
+          }
+          return rule;
+        });
+
+        const selectedRule = rules.find(rule => rule.id === ruleId) || null;
+        return {
+          ...store,
+          rules,
+          selectedRule
+        };
+      }
+      );
+    },
     saveRules: async () => {
       // toast.error('保存成功');
       const currentStore = get(store);
@@ -120,7 +144,7 @@ const createRuleStore = () => {
     },
     getRulesList: async () => {
       const rulesList = await getRuleCollections()
-      // console.log('[info: 110]:', { rulesList })
+      console.log('[info: 110]:', { rulesList })
       update(store => ({
         ...store,
         rules: rulesList.data

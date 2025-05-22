@@ -24,13 +24,11 @@ export const notifyMessage = async (params: {
 
     eventSource.onmessage = (event) => {
 
-      try {
-        // const data = JSON.parse(event.data);
-        if (event.data) {
-          eventSource.close();
-          resolve(event.data);
-        }
-      } catch (error) {
+      console.log('接收到的数据', event.data)
+      if (event.data !== 'undefined') {
+        eventSource.close();
+        resolve(event.data);
+      } else {
         eventSource.close();
         resolve('')
       }

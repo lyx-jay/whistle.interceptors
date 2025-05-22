@@ -7,21 +7,28 @@
   } from "svelte-jsoneditor";
   import ResponseEditor from "@/lib/ResponseEditor.svelte";
   import { ruleStore } from "@/lib/stores/rules";
-  import type { Rule } from "@/lib/types";
+  import type { Rule, RuleCondition, RuleProxyMode } from "@/lib/types";
   import Switch from "@/lib/components/Switch.svelte";
   import Select from "@/lib/components/Select.svelte";
   import { LOCAL_PREFIX, PROXY_MODE } from "./context";
   import { notifyMessage } from "@/api";
+  import { listenPageVisibility } from "./utils";
 
-  // export let selectedRule: Rule | null = null;
-  let showResponseEditor = false;
-  let editingConditionIndex = -1;
-  let responseContent: Content = { text: "" } as TextContent;
-  let mode: Mode = Mode.text;
+  let isFirst = true;
 
-  // let rules: Rule[] = [];
-  // 监听 selectedRule
-  $: selectedRule = $ruleStore.selectedRule;
+  let showResponseEditor = $state(false);
+  let editingConditionIndex = $state(-1);
+  let responseContent = $state<TextContent | JSONContent>({ text: "" });
+  let mode = $state<Mode>(Mode.text);
+
+  let selectedRule = $state<Rule | null>(null);
+
+  let conditions = $state<RuleCondition[]>([]);
+
+  ruleStore.subscribe((state) => {
+    selectedRule = state.selectedRule;
+    conditions = state.selectedRule?.config.conditions || [];
+  });
 
   function openResponseEditor(index: number) {
     editingConditionIndex = index;
@@ -81,6 +88,7 @@
         response: "",
         ruleId: selectedRule.id,
         proxyMode: PROXY_MODE.NETWORK,
+        enabled: true
       },
     ];
     ruleStore.updateRuleConfig(selectedRule.id, config);
@@ -96,6 +104,7 @@
         response: "",
         ruleId: selectedRule.id,
         proxyMode: PROXY_MODE.NETWORK,
+        enabled: true
       },
     ];
     ruleStore.updateRuleConfig(selectedRule.id, config);
@@ -108,23 +117,19 @@
       // @ts-ignore
       config.conditions[editingConditionIndex].response =
         mode === Mode.text
+          // @ts-ignore
           ? responseContent.text
+          // @ts-ignore
           : JSON.stringify(responseContent.json);
-      // console.log(
-      //   "[info: 27]:",
-      //   editingConditionIndex,
-      //   responseContent,
-      //   config,
-      //   mode,
-      // );
       ruleStore.updateRuleConfig(selectedRule.id, config);
       editingConditionIndex = -1;
     }
     showResponseEditor = false;
   }
 
-  $: if (selectedRule) {
-    selectedRule.config.conditions.forEach((condition) => {
+  function handleNotify() {
+    selectedRule?.config.conditions.forEach((condition, index) => {
+      console.log("condition", condition);
       if (condition.proxyMode === PROXY_MODE.NETWORK && condition.enabled) {
         console.log(
           "发出 sse 请求",
@@ -133,11 +138,65 @@
         notifyMessage({
           storage_prefix: `${LOCAL_PREFIX}_${condition.ruleId}_${condition.key}_${condition.value}`,
         }).then((res) => {
-          condition.response = res;
+          if (res) {
+            const newCondition = {...condition, response: res, proxyMode: PROXY_MODE.MOCK}
+            // 触发store更新以刷新UI
+            ruleStore.updateRuleConfigCondition({
+              ruleId: selectedRule!.id,
+              conditionIndex: index,
+              condition: newCondition,
+            });
+          } else {
+            condition.response = "";
+          }
         });
       }
     });
   }
+
+  function handleSwitchChange({
+    index,
+    status,
+    condition,
+  }: {
+    index: number;
+    status: boolean;
+    condition: RuleCondition;
+  }) {
+    const newCondition = { ...condition, enabled: status };
+    ruleStore.updateRuleConfigCondition({
+      ruleId: selectedRule!.id,
+      conditionIndex: index,
+      condition: newCondition,
+    });
+    console.log("Switch changed", status);
+  }
+
+  function handleSelectDropDown({
+    index,
+    selectOption,
+    condition,
+  }: {
+    index: number;
+    selectOption: { value: RuleProxyMode; label: string };
+    condition: RuleCondition;
+  }) {
+    const newCondition = { ...condition, proxyMode: selectOption.value };
+    ruleStore.updateRuleConfigCondition({
+      ruleId: selectedRule!.id,
+      conditionIndex: index,
+      condition: newCondition,
+    });
+  }
+
+  $effect(() => {
+    if (selectedRule && isFirst) {
+      handleNotify();
+      isFirst = false;
+    }
+  });
+
+  listenPageVisibility(handleNotify);
 
   // 监听sse
 </script>
@@ -147,14 +206,14 @@
     <div class="detail-layout">
       <div class="detail-section basic-info">
         <div class="section-content">
-          <button class="add-btn" on:click={addCondition}> 添加条件 </button>
+          <button class="add-btn" onclick={addCondition}> 添加条件 </button>
           <div class="form-group">
             <label for="requestMethod">请求方式</label>
             <select
               id="requestMethod"
               class="form-input select-input"
               value={selectedRule.config.method.toLowerCase()}
-              on:change={(e) => updateMethod(e.currentTarget.value)}
+              onchange={(e) => updateMethod(e.currentTarget.value)}
             >
               <option value="get">GET</option>
               <option value="post">POST</option>
@@ -166,7 +225,7 @@
               id="matchType"
               class="form-input select-input"
               value={selectedRule.config.matchType}
-              on:change={(e) =>
+              onchange={(e) =>
                 updateMatchType(e.currentTarget.value as "and" | "or")}
             >
               <option value="and">与（&）</option>
@@ -176,7 +235,7 @@
           <div class="conditions-container">
             <fieldset>
               <legend>匹配条件</legend>
-              {#each selectedRule.config.conditions as condition, i}
+              {#each conditions as condition, i}
                 <div
                   class="condition-row"
                   role="group"
@@ -184,13 +243,9 @@
                 >
                   <Switch
                     size="small"
-                    bind:checked={condition.enabled}
-                    on:click={() => {
-                      if (selectedRule) {
-                        const config = { ...selectedRule.config };
-                        ruleStore.updateRuleConfig(selectedRule.id, config);
-                      }
-                    }}
+                    checked={condition.enabled}
+                    onChange={(status: boolean) =>
+                      handleSwitchChange({ index: i, status, condition })}
                   />
                   <div class="condition-inputs">
                     <input
@@ -198,7 +253,7 @@
                       class="form-input condition-input"
                       placeholder="Key"
                       bind:value={condition.key}
-                      on:input={() => {
+                      oninput={() => {
                         if (selectedRule) {
                           const config = { ...selectedRule.config };
                           ruleStore.updateRuleConfig(selectedRule.id, config);
@@ -210,7 +265,7 @@
                       class="form-input condition-input"
                       placeholder="Value"
                       bind:value={condition.value}
-                      on:input={() => {
+                      oninput={() => {
                         if (selectedRule) {
                           const config = { ...selectedRule.config };
                           ruleStore.updateRuleConfig(selectedRule.id, config);
@@ -222,7 +277,7 @@
                       class="form-input remark-input"
                       placeholder="备注"
                       bind:value={condition.remark}
-                      on:input={() => {
+                      oninput={() => {
                         if (selectedRule) {
                           const config = { ...selectedRule.config };
                           ruleStore.updateRuleConfig(selectedRule.id, config);
@@ -236,26 +291,27 @@
                         { value: "network", label: "网络模式" },
                         { value: "mock", label: "mock模式" },
                       ]}
-                      bind:value={condition.proxyMode}
+                      value={condition.proxyMode}
                       class_="mode-select"
-                      on:change={() => {
-                        if (selectedRule) {
-                          const config = { ...selectedRule.config };
-                          ruleStore.updateRuleConfig(selectedRule.id, config);
-                        }
-                      }}
+                      onSelect={(selectOption) =>
+                        handleSelectDropDown({
+                          index: i,
+                          selectOption,
+                          condition,
+                        })}
                       placeholder="选择模式"
                     />
                     <button
                       class="edit-response-btn"
-                      on:click={() => openResponseEditor(i)}
+                      onclick={() => openResponseEditor(i)}
                     >
-                      编辑返回值
+                      {condition.proxyMode === PROXY_MODE.NETWORK
+                        ? "查看返回值"
+                        : "编辑返回值"}
                     </button>
                     <button
                       class="remove-btn"
-                      on:click={() => removeCondition(i)}
-                      disabled={selectedRule.config.conditions.length === 1}
+                      onclick={() => removeCondition(i)}
                     >
                       删除
                     </button>

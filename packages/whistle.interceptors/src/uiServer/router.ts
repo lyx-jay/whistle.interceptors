@@ -49,13 +49,13 @@ export default (router: Router) => {
 
     // 发送数据
     const sendEvent = (data: any) => {
-      console.log('[info: 49]:', '向客户端发送消息')
+      // console.log('[info: 49]:', '向客户端发送消息', data)
       ctx.res.write(`data: ${data}\n\n`);
     };
 
     // 模拟实时数据发送
     const interval = setInterval(() => {
-      console.log('[info: 55]:', '模拟实时数据发送')
+      // console.log('[info: 55]:', '模拟实时数据发送')
       sendEvent(ctx.storage.getProperty(storage_prefix));
     }, 1000);
 

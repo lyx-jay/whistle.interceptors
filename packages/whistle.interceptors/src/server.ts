@@ -68,13 +68,15 @@ function handleOrMode({conditions, payload, res, req, options, extra}: {
   const matchingCondition = conditions.find(
     ({ key, value, enabled }) => enabled && payload[key] === value
   );
-
+  console.log('matchCondition', matchingCondition)
   if (!matchingCondition) {
     return true
   }
-
+  
   if (matchingCondition.proxyMode === PROXY_MODE.NETWORK) {
     req.getSession(session => {
+      // @ts-ignore
+      console.log('返回内容', session.res.body)
       // @ts-ignore
       options.localStorage.setProperty(`${LOCAL_PREFIX}_${matchingCondition.ruleId}_${matchingCondition.key}_${matchingCondition.value}`, session.res.body)
     })   

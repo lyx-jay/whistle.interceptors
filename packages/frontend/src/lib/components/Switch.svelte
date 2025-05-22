@@ -1,19 +1,31 @@
 <script lang="ts">
-  export let checked = false;
-  export let disabled = false;
-  export let size: 'small' | 'default' = 'default';
-  export let loading = false;
+
+  let {
+    checked,
+    size = 'default',
+    disabled = false,
+    loading = false,
+    onChange
+  } = $props<{
+    checked: boolean;
+    size?: 'small' | 'default';
+    disabled?: boolean;
+    loading?: boolean;
+    onChange?: (checked: boolean) => void;
+  }>();
+
 
   function handleChange() {
-    if (!disabled && !loading) {
-      checked = !checked;
+    if (disabled || loading) {
+      return;
     }
+    onChange && onChange(!checked)
   }
 </script>
 
 <button
   class="switch-wrapper {size} {checked ? 'checked' : ''} {disabled ? 'disabled' : ''} {loading ? 'loading' : ''}"
-  on:click={handleChange}
+  onclick={handleChange}
   disabled={disabled}
   role="switch"
   aria-checked={checked}
