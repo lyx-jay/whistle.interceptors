@@ -1,6 +1,7 @@
 import { writable, get } from 'svelte/store';
-import type { Rule } from '../types';
-import { addRuleCollections, getRuleCollections } from '../../api';
+import type { Rule, RuleCondition } from '@/lib/types';
+import { addRuleCollections, getRuleCollections } from '@/api';
+import { toast } from '../utils/toast';
 
 type RuleStore = {
   rules: Rule[];
@@ -34,9 +35,9 @@ const createRuleStore = () => {
           id: customId || String(currentRules.length + 1),
           name: name.trim(),
           config: {
-            method: 'GET',
-            matchType: 'and',
-            conditions: [{ key: '', value: '', response: '' }]
+            method: 'POST',
+            matchType: 'or',
+            conditions: [],
           }
         };
         return {
@@ -71,15 +72,15 @@ const createRuleStore = () => {
           }
           return rule;
         });
-        console.log('[info: 68]:', { rules })
+        // console.log('[info: 68]:', { rules })
         const selectedRule = store.selectedRule?.id === ruleId 
           ? { ...store.selectedRule, config }
           : store.selectedRule;
-        console.log('[info: 68]:', {
-          ...store,
-          rules,
-          selectedRule
-        })
+        // console.log('[info: 68]:', {
+        //   ...store,
+        //   rules,
+        //   selectedRule
+        // })
         return {
           ...store,
           rules,
@@ -87,18 +88,45 @@ const createRuleStore = () => {
         };
       });
     },
+    updateRuleConfigCondition: ({
+      ruleId,
+      conditionIndex,
+      condition
+    }: {ruleId: string, conditionIndex: number, condition: RuleCondition}) => {
+      update(store => {
+        const rules = store.rules.map(rule => {
+          if (rule.id === ruleId) {
+            const conditions = [...rule.config.conditions];
+            conditions[conditionIndex] = condition;
+            return { ...rule, config: { ...rule.config, conditions } };
+          }
+          return rule;
+        });
+
+        const selectedRule = rules.find(rule => rule.id === ruleId) || null;
+        return {
+          ...store,
+          rules,
+          selectedRule
+        };
+      }
+      );
+    },
     saveRules: async () => {
+      // toast.error('保存成功');
       const currentStore = get(store);
-      console.log('Current rules:', currentStore.rules);
-      
+      // console.log('Current rules:', currentStore.rules);
+
       try {
         await addRuleCollections(currentStore.rules);
         update(store => ({
           ...store,
           originalRules: [...store.rules]
         }));
+        toast.success('保存成功');
         console.log('Rules saved successfully');
       } catch (error) {
+        toast.error('保存失败');
         console.error('Failed to save rules:', error);
       }
     },

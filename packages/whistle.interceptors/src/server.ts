@@ -1,4 +1,4 @@
-import { LOCAL_PREFIX } from "./uiServer/constant"
+import { LOCAL_PREFIX, PROXY_MODE } from "./uiServer/constant"
 import { Rule } from "./types/rule"
 
 function parseQuery(queryString: string): Record<string, string> {
@@ -13,7 +13,7 @@ function parseQuery(queryString: string): Record<string, string> {
       params[decodeURIComponent(key)] = decodeURIComponent(value);
     }
   });
-  
+
   return params;
 }
 
@@ -26,17 +26,19 @@ function getBody(req: Whistle.PluginServerRequest): Promise<Record<string, strin
   });
 }
 
-function handleAndMode({conditions, payload, res, extra}: {
+function handleAndMode({conditions, payload, res, req, options, extra}: {
   conditions: Rule['config']['conditions'],
   payload: Record<string, string>,
   res: Whistle.PluginServerResponse,
+  req: Whistle.PluginServerRequest,
+  options: Whistle.PluginOptions,
   extra: {
     origin: string
   }
 }) {
   const isMatch = conditions.every((condition) => {
-    const { key, value } = condition
-    return payload[key] && payload[key] === value
+    const { key, value, enabled } = condition
+    return enabled && payload[key] && payload[key] === value
   })
 
   if (!isMatch) {
@@ -53,38 +55,50 @@ function handleAndMode({conditions, payload, res, extra}: {
 
 }
 
-function handleOrMode({conditions, payload, res, extra}: {
+function handleOrMode({conditions, payload, res, req, options, extra}: {
   conditions: Rule['config']['conditions'],
   payload: Record<string, string>,
   res: Whistle.PluginServerResponse,
+  req: Whistle.PluginServerRequest,
+  options:Whistle.PluginOptions,
   extra: {
     origin: string
   }
 }) {
   const matchingCondition = conditions.find(
-    ({ key, value }) => payload[key] === value
+    ({ key, value, enabled }) => enabled && payload[key] === value
   );
-
+  console.log('matchCondition', matchingCondition)
   if (!matchingCondition) {
     return true
   }
   
-  res.setHeader('whistle-plugin', 'whistle.interceptors');
-  res.setHeader('Content-Type', 'application/json; charset=UTF-8');
-  res.setHeader('Access-Control-Allow-Origin', extra.origin);
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-  res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS,PUT,DELETE,HEAD')
-  res.end(matchingCondition.response);
-
+  if (matchingCondition.proxyMode === PROXY_MODE.NETWORK) {
+    req.getSession(session => {
+      // @ts-ignore
+      console.log('返回内容', session.res.body)
+      // @ts-ignore
+      options.localStorage.setProperty(`${LOCAL_PREFIX}_${matchingCondition.ruleId}_${matchingCondition.key}_${matchingCondition.value}`, session.res.body)
+    })   
+    return true
+  } else {
+    res.setHeader('whistle-plugin', 'whistle.interceptors');
+    res.setHeader('Content-Type', 'application/json; charset=UTF-8');
+    res.setHeader('Access-Control-Allow-Origin', extra.origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+    res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS,PUT,DELETE,HEAD')
+    res.end(matchingCondition.response);
+  }
 }
 
-function handleMatchMode({matchType, conditions, payload, res, req}: {
+function handleMatchMode({matchType, conditions, payload, res, req, options}: {
   matchType: 'and' | 'or',
   conditions: Rule['config']['conditions'],
   payload: Record<string, string>,
   res: Whistle.PluginServerResponse,
   req: Whistle.PluginServerRequest
+  options: Whistle.PluginOptions
 }) {
   const map = {
     'and': handleAndMode,
@@ -95,6 +109,8 @@ function handleMatchMode({matchType, conditions, payload, res, req}: {
     conditions,
     payload,
     res,
+    req,
+    options,
     extra: {
       origin: req.headers.origin
     }
@@ -116,7 +132,7 @@ export default (server: Whistle.PluginServer, options: Whistle.PluginOptions) =>
       const rules: Rule[] = JSON.parse(options.storage.getProperty(LOCAL_PREFIX)) || []
       const targetRule = rules.filter((rule: Rule) => rule.id === id)[0]
       const { matchType, method, conditions } = targetRule.config
-  
+
       if (req.method !== method) {
         req.passThrough();
         return
@@ -137,6 +153,7 @@ export default (server: Whistle.PluginServer, options: Whistle.PluginOptions) =>
         conditions,
         res,
         req,
+        options,
         payload: payLoad
       })
     } catch (error) {

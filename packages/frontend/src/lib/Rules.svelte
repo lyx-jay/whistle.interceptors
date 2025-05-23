@@ -1,22 +1,16 @@
 <script lang="ts">
-  import RuleList from './RuleList.svelte';
-  import RuleDetail from './RuleDetail.svelte';
-  import type { Rule } from './types';
-  import { ruleStore } from './stores/rules';
+  import RuleList from '@/lib/RuleList.svelte';
+  import RuleDetail from '@/lib/RuleDetail.svelte';
 
-  let selectedRule: Rule | null = null;
-  ruleStore.subscribe(state => {
-    selectedRule = state.selectedRule;
-  });
 </script>
 
 <div class="rules-container">
   <div class="rules-content">
     <div class="rules-list">
-      <RuleList bind:selectedRule />
+      <RuleList />
     </div>
     <div class="rules-detail">
-      <RuleDetail bind:selectedRule />
+      <RuleDetail />
     </div>
   </div>
 </div>

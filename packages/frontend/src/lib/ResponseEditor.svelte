@@ -4,13 +4,18 @@
   export let showModal = false;
   export let content: Content = { json: {} };
   export let mode: Mode = Mode.text;
+  export let onSave: () => void;
+  export let onClose: () => void;
 
   function closeModal() {
-    showModal = false;
+    onClose?.()
+    // dispatchEvent(new CustomEvent('close'));
   }
 
   function handleSave() {
-    showModal = false;
+    console.log('[info: 14]:', '11111')
+    // dispatchEvent(new CustomEvent('save', { detail: { content, mode } }));
+    onSave?.()
   }
 </script>
 

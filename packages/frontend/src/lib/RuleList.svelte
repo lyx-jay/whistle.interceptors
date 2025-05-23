@@ -1,14 +1,12 @@
 <script lang="ts">
-  import type { Rule } from './types';
-  import { ruleStore } from './stores/rules';
+  import type { Rule } from '@/lib/types';
+  import { ruleStore } from '@/lib/stores/rules';
 
   let showAddDialog = false;
   let newRuleName = '';
   let newRuleId = '';
   let errorMessage = '';
   let searchQuery = '';
-
-  export let selectedRule: Rule | null = null;
 
   function openAddDialog() {
     showAddDialog = true;
@@ -46,6 +44,7 @@
   }
 
   let rules: Rule[] = [];
+  let selectedRule: Rule | null = null;
   ruleStore.subscribe(state => {
     rules = state.rules;
     selectedRule = state.selectedRule;
