@@ -1,3 +1,5 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/lyx-jay/whistle.interceptors)
+
 # whistle.interceptors
 
 一个用于灵活拦截和模拟HTTP请求的whistle插件，提供可视化配置界面。
