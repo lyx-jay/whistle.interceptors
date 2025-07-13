@@ -36,22 +36,52 @@ function handleAndMode({conditions, payload, res, req, options, extra}: {
     origin: string
   }
 }) {
-  const isMatch = conditions.every((condition) => {
-    const { key, value, enabled } = condition
-    return enabled && payload[key] && payload[key] === value
-  })
+  let allMatch = true;
+  let firstMatchingCondition: any = null;
+  let firstMatchingIndex = -1;
+  
+  // 检查所有条件是否都匹配
+  for (let i = 0; i < conditions.length; i++) {
+    const condition = conditions[i];
+    if (!condition.enabled) continue;
+    
+    // 检查所有key-value对是否都匹配
+    const isMatch = condition.pairs.every(pair => 
+      pair.key && pair.value && payload[pair.key] === pair.value
+    );
+    
+    if (!isMatch) {
+      allMatch = false;
+      break;
+    }
+    
+    if (firstMatchingCondition === null) {
+      firstMatchingCondition = condition;
+      firstMatchingIndex = i;
+    }
+  }
 
-  if (!isMatch) {
+  if (!allMatch) {
     return true
   }
 
-  res.setHeader('whistle-plugin', 'whistle.interceptors');
-  res.setHeader('Content-Type', 'application/json; charset=UTF-8');
-  res.setHeader('Access-Control-Allow-Origin', extra.origin);
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-  res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS,PUT,DELETE,HEAD')
-  res.end(conditions[0].response)
+  if (firstMatchingCondition?.proxyMode === PROXY_MODE.NETWORK) {
+    req.getSession(session => {
+      // 以condition为维度保存结果
+      const conditionId = `${firstMatchingCondition.ruleId}_${firstMatchingIndex}`;
+      // @ts-ignore
+      options.localStorage.setProperty(`${LOCAL_PREFIX}_${conditionId}`, session.res.body)
+    })   
+    return true
+  } else {
+    res.setHeader('whistle-plugin', 'whistle.interceptors');
+    res.setHeader('Content-Type', 'application/json; charset=UTF-8');
+    res.setHeader('Access-Control-Allow-Origin', extra.origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+    res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS,PUT,DELETE,HEAD')
+    res.end(firstMatchingCondition?.response || conditions[0].response)
+  }
 
 }
 
@@ -65,20 +95,36 @@ function handleOrMode({conditions, payload, res, req, options, extra}: {
     origin: string
   }
 }) {
-  const matchingCondition = conditions.find(
-    ({ key, value, enabled }) => enabled && payload[key] === value
-  );
-  console.log('matchCondition', matchingCondition)
+  let matchingCondition: any = null;
+  let matchingIndex = -1;
+  
+  // 查找匹配的条件及其索引
+  for (let i = 0; i < conditions.length; i++) {
+    const condition = conditions[i];
+    if (!condition.enabled) continue;
+    
+    // 检查所有key-value对是否都匹配
+    const isMatch = condition.pairs.every(pair => 
+      pair.key && pair.value && payload[pair.key] === pair.value
+    );
+    
+    if (isMatch) {
+      matchingCondition = condition;
+      matchingIndex = i;
+      break;
+    }
+  }
+  
   if (!matchingCondition) {
     return true
   }
   
   if (matchingCondition.proxyMode === PROXY_MODE.NETWORK) {
     req.getSession(session => {
+      // 以condition为维度保存结果
+      const conditionId = `${matchingCondition.ruleId}_${matchingIndex}`;
       // @ts-ignore
-      console.log('返回内容', session.res.body)
-      // @ts-ignore
-      options.localStorage.setProperty(`${LOCAL_PREFIX}_${matchingCondition.ruleId}_${matchingCondition.key}_${matchingCondition.value}`, session.res.body)
+      options.localStorage.setProperty(`${LOCAL_PREFIX}_${conditionId}`, session.res.body)
     })   
     return true
   } else {
@@ -131,22 +177,24 @@ export default (server: Whistle.PluginServer, options: Whistle.PluginOptions) =>
       const id = req.originalReq.ruleValue
       const rules: Rule[] = JSON.parse(options.storage.getProperty(LOCAL_PREFIX)) || []
       const targetRule = rules.filter((rule: Rule) => rule.id === id)[0]
-      const { matchType, method, conditions } = targetRule.config
 
-      if (req.method !== method) {
+      if (!targetRule) {
         req.passThrough();
         return
       }
-  
+
+
+      const { conditions } = targetRule.config
+
       let payLoad: Record<string, string>
-      if (method === 'POST') {
+      if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
         payLoad = await getBody(req)
-      }
-  
-      if (method === 'GET') {
+      } else {
         // @ts-ignore
         payLoad = parseQuery(options.parseUrl(req.fullUrl).query)
       }
+
+      const matchType = 'or'
   
       handleMatchMode({
         matchType,
@@ -161,15 +209,4 @@ export default (server: Whistle.PluginServer, options: Whistle.PluginOptions) =>
     }
   });
 
-  // handle websocket request
-  server.on('upgrade', (req: Whistle.PluginServerRequest, socket: Whistle.PluginServerSocket) => {
-    // do something
-    req.passThrough();
-  });
-
-  // handle tunnel request
-  server.on('connect', (req: Whistle.PluginServerRequest, socket: Whistle.PluginServerSocket) => {
-    // do something
-    req.passThrough();
-  });
 };

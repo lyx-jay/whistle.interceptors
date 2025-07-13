@@ -1,5 +1,6 @@
 <script lang="ts">
   import { JSONEditor, type Content, Mode } from 'svelte-jsoneditor';
+  import { onDestroy } from 'svelte';
 
   export let showModal = false;
   export let content: Content = { json: {} };
@@ -13,18 +14,58 @@
   }
 
   function handleSave() {
-    console.log('[info: 14]:', '11111')
     // dispatchEvent(new CustomEvent('save', { detail: { content, mode } }));
     onSave?.()
   }
+
+  function handleKeydown(event: KeyboardEvent) {
+    // ESC键关闭模态框
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeModal();
+      return;
+    }
+    
+    // Ctrl/Cmd + S 保存并关闭
+    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+      event.preventDefault();
+      handleSave();
+      return;
+    }
+  }
+
+  let keydownListenerAdded = false;
+
+  // 响应式地添加/移除键盘监听器
+  $: {
+    if (showModal && !keydownListenerAdded) {
+      document.addEventListener('keydown', handleKeydown);
+      keydownListenerAdded = true;
+    } else if (!showModal && keydownListenerAdded) {
+      document.removeEventListener('keydown', handleKeydown);
+      keydownListenerAdded = false;
+    }
+  }
+
+  onDestroy(() => {
+    // 确保在组件销毁时移除监听器
+    if (keydownListenerAdded) {
+      document.removeEventListener('keydown', handleKeydown);
+      keydownListenerAdded = false;
+    }
+  });
 </script>
 
 {#if showModal}
   <div class="modal-overlay">
     <div class="modal response-editor-modal">
-      <h2>编辑返回值</h2>
       <div class="editor-container response-editor">
-        <JSONEditor bind:content={content} bind:mode={mode}/>
+        <JSONEditor 
+          bind:content={content} 
+          bind:mode={mode}
+          askToFormat={true}
+          indentation={2}
+        />
       </div>
       <div class="modal-actions">
         <button class="cancel-btn" on:click={closeModal}>取消</button>
@@ -50,7 +91,7 @@
 
   .modal {
     background-color: #2a2a2a;
-    padding: 2rem;
+    padding: 0.5rem 1.5rem 1.5rem 1.5rem;
     border-radius: 8px;
     width: 400px;
   }
@@ -58,15 +99,18 @@
   .response-editor-modal {
     width: 80%;
     max-width: 800px;
-    height: 80vh;
+    height: 85vh;
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
   .response-editor {
     flex: 1;
     margin: 1rem 0;
-    min-height: 300px;
+    min-height: 400px;
+    overflow: hidden;
   }
 
   .modal h2 {
@@ -78,7 +122,7 @@
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
-    margin-top: 2rem;
+    flex-shrink: 0;
   }
 
   .cancel-btn,

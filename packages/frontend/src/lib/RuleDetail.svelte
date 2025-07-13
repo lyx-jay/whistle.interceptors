@@ -56,8 +56,7 @@
     config.conditions = [
       ...config.conditions,
       {
-        key: "",
-        value: "",
+        pairs: [{ key: "", value: "" }],
         response: "",
         enabled: true,
         remark: "",
@@ -75,22 +74,9 @@
     ruleStore.updateRuleConfig(selectedRule.id, config);
   }
 
-  function updateMethod(method: string) {
-    if (!selectedRule) return;
-    if (selectedRule.config.method === method) return;
-    const config = {
-      ...selectedRule.config,
-      method: method.toUpperCase() as Rule["config"]["method"],
-    };
-    ruleStore.updateRuleConfig(selectedRule.id, config);
-  }
 
-  function updateMatchType(matchType: "and" | "or") {
-    if (!selectedRule) return;
-    if (selectedRule.config.matchType === matchType) return;
-    const config = { ...selectedRule.config, matchType };
-    ruleStore.updateRuleConfig(selectedRule.id, config);
-  }
+
+
 
   function handleResponseEditorSave() {
     console.log("[info: 127]:", "保存编辑器并关闭");
@@ -113,12 +99,14 @@
     selectedRule?.config.conditions.forEach((condition, index) => {
       console.log("condition", condition);
       if (condition.proxyMode === PROXY_MODE.NETWORK && condition.enabled) {
+        // 生成condition的唯一标识符
+        const conditionId = `${condition.ruleId}_${index}`;
         console.log(
           "发出 sse 请求",
-          `${LOCAL_PREFIX}_${condition.ruleId}_${condition.key}_${condition.value}`,
+          `${LOCAL_PREFIX}_${conditionId}`,
         );
         notifyMessage({
-          storage_prefix: `${LOCAL_PREFIX}_${condition.ruleId}_${condition.key}_${condition.value}`,
+          storage_prefix: `${LOCAL_PREFIX}_${conditionId}`,
         }).then((res) => {
           if (res) {
             const newCondition = {...condition, response: res, proxyMode: PROXY_MODE.MOCK}
@@ -171,6 +159,27 @@
     });
   }
 
+  function addKeyValuePair(conditionIndex: number) {
+    if (!selectedRule) return;
+    const config = { ...selectedRule.config };
+    config.conditions[conditionIndex].pairs.push({ key: "", value: "" });
+    ruleStore.updateRuleConfig(selectedRule.id, config);
+  }
+
+  function removeKeyValuePair(conditionIndex: number, pairIndex: number) {
+    if (!selectedRule) return;
+    const config = { ...selectedRule.config };
+    config.conditions[conditionIndex].pairs.splice(pairIndex, 1);
+    ruleStore.updateRuleConfig(selectedRule.id, config);
+  }
+
+  function updateKeyValuePair(conditionIndex: number, pairIndex: number, key: string, value: string) {
+    if (!selectedRule) return;
+    const config = { ...selectedRule.config };
+    config.conditions[conditionIndex].pairs[pairIndex] = { key, value };
+    ruleStore.updateRuleConfig(selectedRule.id, config);
+  }
+
   $effect(() => {
     if (selectedRule && isFirst) {
       handleNotify();
@@ -189,31 +198,8 @@
       <div class="detail-section basic-info">
         <div class="section-content">
           <button class="add-btn" onclick={addCondition}> 添加条件 </button>
-          <div class="form-group">
-            <label for="requestMethod">请求方式</label>
-            <select
-              id="requestMethod"
-              class="form-input select-input"
-              value={selectedRule.config.method.toLowerCase()}
-              onchange={(e) => updateMethod(e.currentTarget.value)}
-            >
-              <option value="get">GET</option>
-              <option value="post">POST</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="matchType">匹配模式</label>
-            <select
-              id="matchType"
-              class="form-input select-input"
-              value={selectedRule.config.matchType}
-              onchange={(e) =>
-                updateMatchType(e.currentTarget.value as "and" | "or")}
-            >
-            <option value="or">或</option>
-            <!-- <option value="and">与（&）</option> -->
-            </select>
-          </div>
+
+
           <div class="conditions-container">
             <fieldset>
               <legend>匹配条件</legend>
@@ -230,30 +216,43 @@
                       handleSwitchChange({ index: i, status, condition })}
                   />
                   <div class="condition-inputs">
-                    <input
-                      type="text"
-                      class="form-input condition-input"
-                      placeholder="Key"
-                      bind:value={condition.key}
-                      oninput={() => {
-                        if (selectedRule) {
-                          const config = { ...selectedRule.config };
-                          ruleStore.updateRuleConfig(selectedRule.id, config);
-                        }
-                      }}
-                    />
-                    <input
-                      type="text"
-                      class="form-input condition-input"
-                      placeholder="Value"
-                      bind:value={condition.value}
-                      oninput={() => {
-                        if (selectedRule) {
-                          const config = { ...selectedRule.config };
-                          ruleStore.updateRuleConfig(selectedRule.id, config);
-                        }
-                      }}
-                    />
+                    <div class="key-value-pairs">
+                      {#each condition.pairs as pair, pairIndex}
+                        <div class="key-value-pair">
+                          <input
+                            type="text"
+                            class="form-input condition-input"
+                            placeholder="Key"
+                            bind:value={pair.key}
+                            oninput={() => {
+                              updateKeyValuePair(i, pairIndex, pair.key, pair.value);
+                            }}
+                          />
+                          <input
+                            type="text"
+                            class="form-input condition-input"
+                            placeholder="Value"
+                            bind:value={pair.value}
+                            oninput={() => {
+                              updateKeyValuePair(i, pairIndex, pair.key, pair.value);
+                            }}
+                          />
+                          <button
+                            class="remove-pair-btn"
+                            onclick={() => removeKeyValuePair(i, pairIndex)}
+                            disabled={condition.pairs.length === 1}
+                          >
+                            -
+                          </button>
+                        </div>
+                      {/each}
+                      <button
+                        class="add-pair-btn"
+                        onclick={() => addKeyValuePair(i)}
+                      >
+                        + 添加键值对
+                      </button>
+                    </div>
                     <input
                       type="text"
                       class="form-input remark-input"
@@ -485,6 +484,54 @@
 
   .condition-input {
     max-width: 200px;
+  }
+
+  .key-value-pairs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-right: 1rem;
+  }
+
+  .key-value-pair {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .add-pair-btn {
+    padding: 0.25rem 0.5rem;
+    background-color: #52c41a;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    font-size: 0.875rem;
+    align-self: flex-start;
+  }
+
+  .add-pair-btn:hover {
+    background-color: #73d13d;
+  }
+
+  .remove-pair-btn {
+    padding: 0.25rem 0.5rem;
+    background-color: #ff4d4f;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    font-size: 0.875rem;
+    min-width: 30px;
+  }
+
+  .remove-pair-btn:hover {
+    background-color: #ff7875;
+  }
+
+  .remove-pair-btn:disabled {
+    background-color: #666;
+    cursor: not-allowed;
   }
 
   .no-selection {

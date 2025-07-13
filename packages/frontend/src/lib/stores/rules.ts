@@ -35,8 +35,6 @@ const createRuleStore = () => {
           id: customId || String(currentRules.length + 1),
           name: name.trim(),
           config: {
-            method: 'POST',
-            matchType: 'or',
             conditions: [],
           }
         };
@@ -144,7 +142,6 @@ const createRuleStore = () => {
     },
     getRulesList: async () => {
       const rulesList = await getRuleCollections()
-      console.log('[info: 110]:', { rulesList })
       update(store => ({
         ...store,
         rules: rulesList.data
