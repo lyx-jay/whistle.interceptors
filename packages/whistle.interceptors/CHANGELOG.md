@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.5](https://github.com/lyx-jay/whistle.interceptors/compare/v0.0.4...v0.0.5) (2025-07-13)
+
+
+### Features
+
+* 1.单个条件支持添加多个键值对 ([12f67cf](https://github.com/lyx-jay/whistle.interceptors/commit/12f67cf99c9d7ad7c023c1a95eba8608c0e16330))
+
 ### 0.0.4 (2025-05-23)
 
 
