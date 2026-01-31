@@ -22,7 +22,7 @@ export default (router: Router) => {
   });
 
   router.post(apis.add, (ctx: RouterContext) => {
-    console.log("ssss", ctx.request.body, typeof ctx.request.body);
+    // console.log("ssss", ctx.request.body, typeof ctx.request.body);
     ctx.storage.setProperty(LOCAL_PREFIX, JSON.stringify(ctx.request.body));
     ctx.body = {
       result: "ok",
@@ -31,7 +31,7 @@ export default (router: Router) => {
   });
 
   router.delete(apis.delete, (ctx) => {
-    console.log("ssss", ctx);
+    // console.log("ssss", ctx);
     ctx.body = "ok";
   });
 
@@ -54,14 +54,16 @@ export default (router: Router) => {
     };
 
     // 模拟实时数据发送
-    const interval = setInterval(() => {
-      // console.log('[info: 55]:', '模拟实时数据发送')
-      sendEvent(ctx.storage.getProperty(storage_prefix));
-    }, 1000);
+    // const interval = setInterval(() => {
+    //   // console.log('[info: 55]:', '模拟实时数据发送')
+    //   sendEvent(ctx.storage.getProperty(storage_prefix));
+    // }, 1000);
+
+    sendEvent(ctx.storage.getProperty(storage_prefix));
 
     // 当客户端关闭连接时清除定时器
     ctx.req.on("close", () => {
-      clearInterval(interval);
+      // clearInterval(interval);
       ctx.storage.removeProperty(storage_prefix);
     });
   });

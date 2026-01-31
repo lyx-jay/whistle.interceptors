@@ -62,6 +62,7 @@ typings/
 /.history
 /dist
 .console.log
+.pnpm-store
 
 packages/whistle.interceptors/dist
 packages/whistle.interceptors/public
