@@ -16,6 +16,7 @@
   import { toast } from "@/lib/utils/toast";
   import DeleteButton from "@/lib/components/DeleteButton.svelte";
   import Button from "@/lib/components/Button.svelte";
+  import abIcon from "@/assets/ab.svg";
 
   let isFirst = true;
 
@@ -27,6 +28,54 @@
   let selectedRule = $state<Rule | null>(null);
 
   let conditions = $state<RuleCondition[]>([]);
+
+  let searchQuery = $state("");
+  let currentMatchIndex = $state(-1);
+
+  let matchedIndices = $derived.by(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    return conditions.map((condition, index) => {
+      const hasMatch = condition.pairs.some(pair => 
+        pair.key.toLowerCase().includes(query) || 
+        pair.value.toLowerCase().includes(query)
+      );
+      return hasMatch ? index : -1;
+    }).filter(index => index !== -1);
+  });
+
+  $effect(() => {
+    if (matchedIndices.length > 0) {
+      if (currentMatchIndex === -1 || !matchedIndices.includes(currentMatchIndex)) {
+        currentMatchIndex = matchedIndices[0];
+      }
+    } else {
+      currentMatchIndex = -1;
+    }
+  });
+
+  function scrollToCondition(index: number) {
+    const element = document.getElementById(`condition-${index}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function nextMatch() {
+    if (matchedIndices.length === 0) return;
+    const currentIndexInMatches = matchedIndices.indexOf(currentMatchIndex);
+    const nextIndexInMatches = (currentIndexInMatches + 1) % matchedIndices.length;
+    currentMatchIndex = matchedIndices[nextIndexInMatches];
+    scrollToCondition(currentMatchIndex);
+  }
+
+  function prevMatch() {
+    if (matchedIndices.length === 0) return;
+    const currentIndexInMatches = matchedIndices.indexOf(currentMatchIndex);
+    const prevIndexInMatches = (currentIndexInMatches - 1 + matchedIndices.length) % matchedIndices.length;
+    currentMatchIndex = matchedIndices[prevIndexInMatches];
+    scrollToCondition(currentMatchIndex);
+  }
 
   ruleStore.subscribe((state) => {
     selectedRule = state.selectedRule;
@@ -59,7 +108,7 @@
     config.conditions = [
       ...config.conditions,
       {
-        pairs: [{ key: "", value: "" }],
+        pairs: [{ key: "", value: "", matchMode: 'fuzzy' }],
         response: "",
         enabled: true,
         remark: "",
@@ -93,6 +142,7 @@
           // @ts-ignore
           : JSON.stringify(responseContent.json);
       ruleStore.updateRuleConfig(selectedRule.id, config);
+      ruleStore.saveRules();
       editingConditionIndex = -1;
     }
     showResponseEditor = false;
@@ -100,14 +150,9 @@
 
   function handleNotify() {
     selectedRule?.config.conditions.forEach((condition, index) => {
-      console.log("condition", condition);
       if (condition.proxyMode === PROXY_MODE.NETWORK && condition.enabled) {
         // 生成condition的唯一标识符
         const conditionId = `${condition.ruleId}_${index}`;
-        console.log(
-          "发出 sse 请求",
-          `${LOCAL_PREFIX}_${conditionId}`,
-        );
         notifyMessage({
           storage_prefix: `${LOCAL_PREFIX}_${conditionId}`,
         }).then((res) => {
@@ -119,9 +164,11 @@
               conditionIndex: index,
               condition: newCondition,
             });
+            ruleStore.saveRules();
             toast.success("数据更新成功");
           } else {
             condition.response = "";
+            toast.error("数据更新失败, 请刷新业务页面尝试");
           }
         });
       }
@@ -166,7 +213,7 @@
   function addKeyValuePair(conditionIndex: number) {
     if (!selectedRule) return;
     const config = { ...selectedRule.config };
-    config.conditions[conditionIndex].pairs.push({ key: "", value: "" });
+    config.conditions[conditionIndex].pairs.push({ key: "", value: "", matchMode: 'fuzzy' });
     ruleStore.updateRuleConfig(selectedRule.id, config);
   }
 
@@ -180,7 +227,19 @@
   function updateKeyValuePair(conditionIndex: number, pairIndex: number, key: string, value: string) {
     if (!selectedRule) return;
     const config = { ...selectedRule.config };
-    config.conditions[conditionIndex].pairs[pairIndex] = { key, value };
+    config.conditions[conditionIndex].pairs[pairIndex] = { 
+      ...config.conditions[conditionIndex].pairs[pairIndex],
+      key, 
+      value 
+    };
+    ruleStore.updateRuleConfig(selectedRule.id, config);
+  }
+
+  function toggleMatchMode(conditionIndex: number, pairIndex: number) {
+    if (!selectedRule) return;
+    const config = { ...selectedRule.config };
+    const pair = config.conditions[conditionIndex].pairs[pairIndex];
+    pair.matchMode = pair.matchMode === 'exact' ? 'fuzzy' : 'exact';
     ruleStore.updateRuleConfig(selectedRule.id, config);
   }
 
@@ -201,7 +260,43 @@
     <div class="detail-layout">
       <div class="detail-section basic-info">
         <div class="section-content">
-          <Button onclick={addCondition}> 添加条件 </Button>
+          <div class="actions-header">
+            <Button onclick={addCondition}> 添加条件 </Button>
+            
+            <div class="condition-search">
+              <div class="search-input-wrapper">
+                <input 
+                  type="text" 
+                  placeholder="搜索 Key / Value..." 
+                  bind:value={searchQuery}
+                  class="search-input"
+                />
+                {#if matchedIndices.length > 0}
+                  <span class="search-count">
+                    {matchedIndices.indexOf(currentMatchIndex) + 1} / {matchedIndices.length}
+                  </span>
+                {/if}
+              </div>
+              <div class="search-nav">
+                <Button 
+                  type="secondary" 
+                  size="small" 
+                  onclick={prevMatch} 
+                  disabled={matchedIndices.length === 0}
+                >
+                  ↑
+                </Button>
+                <Button 
+                  type="secondary" 
+                  size="small" 
+                  onclick={nextMatch} 
+                  disabled={matchedIndices.length === 0}
+                >
+                  ↓
+                </Button>
+              </div>
+            </div>
+          </div>
 
 
           <div class="conditions-container">
@@ -209,7 +304,8 @@
               <legend>匹配条件</legend>
               {#each conditions as condition, i}
                 <div
-                  class="condition-row"
+                  id="condition-{i}"
+                  class="condition-row {matchedIndices.includes(i) ? 'highlighted' : ''} {currentMatchIndex === i ? 'active-highlight' : ''}"
                   role="group"
                   aria-labelledby="conditions-label"
                 >
@@ -243,6 +339,13 @@
                               updateKeyValuePair(i, pairIndex, pair.key, pair.value);
                             }}
                           />
+                          <div 
+                            class="match-mode-toggle {pair.matchMode === 'exact' ? 'active' : ''}" 
+                            onclick={() => toggleMatchMode(i, pairIndex)}
+                            title={pair.matchMode === 'exact' ? 'Exact Match' : 'Fuzzy Match'}
+                          >
+                            <img src={abIcon} alt="ab" class="ab-icon" />
+                          </div>
                           <Button
                             type="danger"
                             size="small"
@@ -345,9 +448,67 @@
   .section-content {
     padding: 1rem;
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .actions-header {
+    display: flex;
     align-items: center;
+    gap: 1.5rem;
+    width: 100%;
+  }
+
+  .condition-search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #18181b;
+    padding: 2px 4px;
+    border-radius: 6px;
+    border: 1px solid #3f3f46;
+  }
+
+  .search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .condition-search .search-input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 0.85rem;
+    padding: 4px 8px;
+    width: 180px;
+    outline: none;
+  }
+
+  .search-count {
+    font-size: 11px;
+    color: #71717a;
+    margin-right: 4px;
+    min-width: 30px;
+    text-align: right;
+  }
+
+  .search-nav {
+    display: flex;
+    gap: 2px;
+  }
+
+  .search-nav :global(button) {
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+  }
+
+  .search-nav :global(button:hover:not(:disabled)) {
+    background: rgba(255, 255, 255, 0.1);
   }
 
   .basic-info {
@@ -387,6 +548,17 @@
     padding: 1.5rem 0;
     align-items: flex-start;
     border-bottom: 1px solid #333;
+    transition: background-color 0.3s;
+    border-radius: 4px;
+  }
+
+  .condition-row.highlighted {
+    background-color: rgba(255, 255, 255, 0.03);
+  }
+
+  .condition-row.active-highlight {
+    background-color: rgba(0, 122, 204, 0.1);
+    box-shadow: inset 2px 0 0 #007acc;
   }
 
   .condition-row:last-child {
@@ -401,6 +573,58 @@
   :global(.add-pair-btn) {
     width: 100%;
     margin-top: 0.25rem;
+  }
+
+  .match-mode-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    border-radius: 3px;
+    user-select: none;
+    transition: all 0.1s;
+    border: 1px solid transparent;
+    color: #888;
+    margin: 0 2px;
+    flex-shrink: 0;
+  }
+
+  .match-mode-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ccc;
+  }
+
+  .match-mode-toggle.active {
+    background-color: rgba(0, 122, 204, 0.3);
+    border-color: #007acc;
+    color: #fff;
+  }
+
+  .match-mode-toggle.active:hover {
+    background-color: rgba(0, 122, 204, 0.4);
+  }
+
+  .ab-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.6;
+    filter: invert(100%);
+    transition: opacity 0.1s;
+  }
+
+  .match-mode-toggle.active .ab-icon {
+    opacity: 1;
+  }
+
+  .match-mode-toggle:hover .ab-icon {
+    opacity: 0.9;
+  }
+
+  :global(.match-mode-btn) {
+    min-width: 60px;
+    padding: 0 4px;
   }
 
   .condition-inputs {
@@ -442,7 +666,7 @@
   .key-value-pair {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.25rem;
   }
 
   .no-selection {

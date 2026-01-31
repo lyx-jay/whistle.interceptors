@@ -1,5 +1,5 @@
 import Toast from "@/lib/components/Toast.svelte";
-import { mount } from 'svelte';
+import { mount, unmount } from 'svelte';
 type ToastType = 'info' | 'success' | 'error' | 'warning';
 
 interface ToastOptions {
@@ -11,6 +11,8 @@ interface ToastOptions {
 class ToastManager {
   private static instance: ToastManager;
   private container: HTMLDivElement | null = null;
+  private currentToast: any = null;
+  private currentWrapper: HTMLDivElement | null = null;
 
   private constructor() {}
 
@@ -32,8 +34,23 @@ class ToastManager {
 
   private createToast(options: ToastOptions) {
     const container = this.getContainer();
+
+    // 如果当前有正在显示的 toast，先清理掉
+    if (this.currentToast) {
+      try {
+        unmount(this.currentToast);
+      } catch (e) {
+        console.error('Failed to unmount previous toast', e);
+      }
+      if (this.currentWrapper) {
+        this.currentWrapper.remove();
+      }
+    }
+
     const wrapper = document.createElement("div");
     container.appendChild(wrapper);
+    this.currentWrapper = wrapper;
+
     const { message = "", duration = 3000, type = "info" } = options;
 
     // 确保在创建组件之前所有必需的属性都已定义
@@ -49,17 +66,27 @@ class ToastManager {
         duration,
         type,
         onClose: () => {
-          setTimeout(() => {
-            wrapper.remove();
-            if (container.childNodes.length === 0) {
-              container.remove();
-              this.container = null;
-            }
-          }, 300);
+          // 只清理自己，如果自己是当前活跃的那个
+          if (this.currentToast === toastComponent) {
+            setTimeout(() => {
+              if (this.currentToast === toastComponent) {
+                unmount(toastComponent);
+                wrapper.remove();
+                this.currentToast = null;
+                this.currentWrapper = null;
+                
+                if (container.childNodes.length === 0) {
+                  container.remove();
+                  this.container = null;
+                }
+              }
+            }, 300);
+          }
         },
       },
     });
 
+    this.currentToast = toastComponent;
     return toastComponent;
   }
 

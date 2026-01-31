@@ -93,5 +93,79 @@ describe('server.ts optimizations', () => {
 
       expect(result).toBe(true);
     });
+
+    describe('matchMode: fuzzy vs exact', () => {
+      it('should match fuzzy by default (substring)', () => {
+        const conditions = [
+          {
+            ruleId: 'rule1',
+            enabled: true,
+            pairs: [{ key: 'channel_code', value: '123' }], // Default fuzzy
+            response: '{"match": "fuzzy"}',
+            proxyMode: PROXY_MODE.MOCK,
+          },
+        ];
+        const payload = { channel_code: '123,456,789' };
+
+        const result = handleOrMode({ conditions, payload, res: mockRes, req: mockReq, options: mockOptions, extra });
+
+        expect(result).toBe(false);
+        expect(mockRes.end).toHaveBeenCalledWith('{"match": "fuzzy"}');
+      });
+
+      it('should NOT match fuzzy if substring is not present', () => {
+        const conditions = [
+          {
+            ruleId: 'rule1',
+            enabled: true,
+            pairs: [{ key: 'channel_code', value: '123', matchMode: 'fuzzy' as const }],
+            response: '{"match": "fuzzy"}',
+            proxyMode: PROXY_MODE.MOCK,
+          },
+        ];
+        const payload = { channel_code: '456,789' };
+
+        const result = handleOrMode({ conditions, payload, res: mockRes, req: mockReq, options: mockOptions, extra });
+
+        expect(result).toBe(true);
+        expect(mockRes.end).not.toHaveBeenCalled();
+      });
+
+      it('should NOT match exact if values are not strictly equal', () => {
+        const conditions = [
+          {
+            ruleId: 'rule1',
+            enabled: true,
+            pairs: [{ key: 'channel_code', value: '123', matchMode: 'exact' as const }],
+            response: '{"match": "exact"}',
+            proxyMode: PROXY_MODE.MOCK,
+          },
+        ];
+        const payload = { channel_code: '123,456,789' };
+
+        const result = handleOrMode({ conditions, payload, res: mockRes, req: mockReq, options: mockOptions, extra });
+
+        expect(result).toBe(true);
+        expect(mockRes.end).not.toHaveBeenCalled();
+      });
+
+      it('should match exact if values are strictly equal', () => {
+        const conditions = [
+          {
+            ruleId: 'rule1',
+            enabled: true,
+            pairs: [{ key: 'channel_code', value: '123', matchMode: 'exact' as const }],
+            response: '{"match": "exact"}',
+            proxyMode: PROXY_MODE.MOCK,
+          },
+        ];
+        const payload = { channel_code: '123' };
+
+        const result = handleOrMode({ conditions, payload, res: mockRes, req: mockReq, options: mockOptions, extra });
+
+        expect(result).toBe(false);
+        expect(mockRes.end).toHaveBeenCalledWith('{"match": "exact"}');
+      });
+    });
   });
 });

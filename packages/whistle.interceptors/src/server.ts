@@ -92,9 +92,16 @@ export function handleOrMode({conditions, payload, res, req, options, extra}: {
     if (!condition.enabled) continue;
     
     // 检查所有 key-value 对是否都匹配
-    const isMatch = condition.pairs.every(pair => 
-      pair.key && pair.value && payload[pair.key] === pair.value
-    );
+    const isMatch = condition.pairs.every(pair => {
+      if (!pair.key || !pair.value) return false;
+      const actualValue = String(payload[pair.key] || '');
+      if (pair.matchMode === 'exact') {
+        return actualValue === pair.value;
+      }
+      console.log('模糊匹配', 'actualValue', actualValue, 'pair.value', pair.value);
+      // 默认模糊匹配 (fuzzy)
+      return actualValue.includes(pair.value);
+    });
     
     if (isMatch) {
       matchingCondition = condition;

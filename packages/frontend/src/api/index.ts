@@ -24,7 +24,7 @@ export const notifyMessage = async (params: {
 
     eventSource.onmessage = (event) => {
 
-      console.log('接收到的数据', event.data)
+      // console.log('接收到的数据', event.data)
       if (event.data !== 'undefined') {
         eventSource.close();
         resolve(event.data);

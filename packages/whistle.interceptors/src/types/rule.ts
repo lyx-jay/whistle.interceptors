@@ -1,6 +1,7 @@
 export interface KeyValuePair {
   key: string;
   value: string;
+  matchMode?: 'fuzzy' | 'exact';
 }
 
 export interface Rule {
