@@ -1,18 +1,21 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import type { RuleProxyMode } from "../types";
+  import arrowDown from "@/assets/arrow-down.svg";
 
   let {
     options,
     value,
     placeholder = "请选择",
     class_ = "",
+    size = "default",
     onSelect,
   } = $props<{
     options: Array<{ value: RuleProxyMode; label: string }>;
     value: any;
     placeholder: string;
     class_: string;
+    size?: "small" | "default";
     onSelect: (option: { value: RuleProxyMode; label: string }) => void;
   }>();
 
@@ -49,12 +52,14 @@
   );
 </script>
 
-<div class="select-container {class_}" bind:this={selectElement}>
+<div class="select-container {class_} {size}" bind:this={selectElement}>
   <div class="select-header" on:click={toggleDropdown} class:open={isOpen}>
     <span class="select-value" class:placeholder={!selectedOption}>
       {displayValue}
     </span>
-    <span class="select-arrow" class:open={isOpen}>▼</span>
+    <span class="select-arrow" class:open={isOpen}>
+      <img src={arrowDown} alt="arrow" />
+    </span>
   </div>
 
   {#if isOpen}
@@ -84,20 +89,24 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 12px;
-    border: 1px solid #dcdfe6;
-    border-radius: 4px;
-    background-color: #fff;
+    padding: 0 12px;
+    border: 1px solid #3f3f46;
+    border-radius: 6px;
+    background-color: #18181b;
+    color: #ffffff;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    height: 32px;
+    box-sizing: border-box;
   }
 
   .select-header:hover {
-    border-color: #c0c4cc;
+    border-color: #52525b;
   }
 
   .select-header.open {
-    border-color: #409eff;
+    border-color: #ffffff;
+    box-shadow: 0 0 0 1px #ffffff;
   }
 
   .select-value {
@@ -105,18 +114,26 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: #2c2b2b;
+    font-size: 0.9rem;
   }
 
   .select-value.placeholder {
-    color: #909399;
+    color: #71717a;
   }
 
   .select-arrow {
     margin-left: 8px;
-    font-size: 12px;
-    color: #c0c4cc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: transform 0.2s;
+  }
+
+  .select-arrow img {
+    width: 12px;
+    height: 12px;
+    opacity: 0.6;
+    filter: invert(100%);
   }
 
   .select-arrow.open {
@@ -131,27 +148,51 @@
     margin-top: 4px;
     max-height: 200px;
     overflow-y: auto;
-    background-color: #fff;
-    border: 1px solid #e4e7ed;
-    border-radius: 4px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    background-color: #18181b;
+    border: 1px solid #3f3f46;
+    border-radius: 6px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
     z-index: 1000;
-    color: #2c2b2b;
+    padding: 4px;
   }
 
   .select-option {
     padding: 8px 12px;
     cursor: pointer;
+    transition: background-color 0.2s;
+    border-radius: 4px;
+    color: #e4e4e7;
+    font-size: 0.9rem;
+    margin-bottom: 2px;
+  }
+
+  .select-option:last-child {
+    margin-bottom: 0;
   }
 
   .select-option:hover {
-    background-color: #f5f7fa;
+    background-color: #27272a;
+    color: #ffffff;
   }
 
   .select-option.selected {
-    color: #409eff;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
     font-weight: 500;
-    background-color: #ecf5ff;
+  }
+
+  .small .select-header {
+    height: 28px;
+    padding: 0 8px;
+  }
+
+  .small .select-value {
+    font-size: 0.85rem;
+  }
+
+  .small .select-option {
+    padding: 6px 10px;
+    font-size: 0.85rem;
   }
 
   .disabled {

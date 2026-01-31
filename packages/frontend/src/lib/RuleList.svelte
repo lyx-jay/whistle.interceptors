@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { Rule } from '@/lib/types';
   import { ruleStore } from '@/lib/stores/rules';
+  import DeleteButton from '@/lib/components/DeleteButton.svelte';
+  import Button from '@/lib/components/Button.svelte';
 
   let showAddDialog = false;
   let newRuleName = '';
@@ -75,16 +77,21 @@
           class="rule-item {selectedRule?.id === rule.id ? 'selected' : ''}"
           on:click={() => selectRule(rule)}
         >
-          <div class="name">{rule.name}</div>
-          <div class="id">ID: {rule.id}</div>
-          <button class="delete-btn" on:click|stopPropagation={() => deleteRule(rule)}>删除</button>
+          <div class="rule-info">
+            <div class="name">{rule.name}</div>
+            <div class="id">ID: {rule.id}</div>
+          </div>
+          <DeleteButton 
+            onclick={(e: MouseEvent) => { e.stopPropagation(); deleteRule(rule); }}
+            class="item-delete-btn"
+          />
         </div>
       {/each}
     </div>
   </div>
   <div class="button-bar">
-    <button class="action-btn add-btn" on:click={openAddDialog}>添加</button>
-    <button class="action-btn save-btn" on:click={saveRules}>保存</button>
+    <Button type="primary" onclick={openAddDialog}>添加</Button>
+    <Button type="secondary" onclick={saveRules}>保存</Button>
   </div>
 </div>
 
@@ -108,8 +115,8 @@
         <div class="error-message">{errorMessage}</div>
       {/if}
       <div class="dialog-buttons">
-        <button class="dialog-btn cancel-btn" on:click={closeAddDialog}>取消</button>
-        <button class="dialog-btn confirm-btn" on:click={addRule}>确定</button>
+        <Button type="secondary" onclick={closeAddDialog}>取消</Button>
+        <Button type="primary" onclick={addRule}>确定</Button>
       </div>
     </div>
   </div>
@@ -170,27 +177,30 @@
     background-color: #333;
   }
 
+  .rule-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    overflow: hidden;
+  }
+
   .name {
     font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .id {
     font-size: 0.8rem;
     color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .delete-btn {
+  :global(.item-delete-btn) {
     margin-left: 1rem;
-    padding: 0.2rem 0.6rem;
-    background: #ff4d4f;
-    color: #fff;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: background 0.2s;
-  }
-  .delete-btn:hover {
-    background: #d9363e;
   }
 
   .button-bar {
@@ -198,31 +208,7 @@
     justify-content: space-between;
     padding: 1rem;
     border-top: 1px solid #333;
-  }
-
-  .action-btn {
-    padding: 0.5rem 1.5rem;
-    border: none;
-    border-radius: 4px;
-    color: #fff;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  .add-btn {
-    background: #1890ff;
-  }
-
-  .add-btn:hover {
-    background: #40a9ff;
-  }
-
-  .save-btn {
-    background: #52c41a;
-  }
-
-  .save-btn:hover {
-    background: #73d13d;
+    gap: 1rem;
   }
 
   .dialog-overlay {
@@ -264,32 +250,6 @@
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
-  }
-
-  .dialog-btn {
-    padding: 0.5rem 1.5rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  .cancel-btn {
-    background: #666;
-    color: #fff;
-  }
-
-  .cancel-btn:hover {
-    background: #888;
-  }
-
-  .confirm-btn {
-    background: #1890ff;
-    color: #fff;
-  }
-
-  .confirm-btn:hover {
-    background: #40a9ff;
   }
 
   .error-message {

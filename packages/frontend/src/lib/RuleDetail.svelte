@@ -13,6 +13,9 @@
   import { LOCAL_PREFIX, PROXY_MODE } from "./context";
   import { notifyMessage } from "@/api";
   import { listenPageVisibility } from "./utils";
+  import { toast } from "@/lib/utils/toast";
+  import DeleteButton from "@/lib/components/DeleteButton.svelte";
+  import Button from "@/lib/components/Button.svelte";
 
   let isFirst = true;
 
@@ -116,6 +119,7 @@
               conditionIndex: index,
               condition: newCondition,
             });
+            toast.success("数据更新成功");
           } else {
             condition.response = "";
           }
@@ -197,7 +201,7 @@
     <div class="detail-layout">
       <div class="detail-section basic-info">
         <div class="section-content">
-          <button class="add-btn" onclick={addCondition}> 添加条件 </button>
+          <Button onclick={addCondition}> 添加条件 </Button>
 
 
           <div class="conditions-container">
@@ -209,12 +213,14 @@
                   role="group"
                   aria-labelledby="conditions-label"
                 >
-                  <Switch
-                    size="small"
-                    checked={condition.enabled}
-                    onChange={(status: boolean) =>
-                      handleSwitchChange({ index: i, status, condition })}
-                  />
+                  <div style="margin-top: 6px;">
+                    <Switch
+                      size="small"
+                      checked={condition.enabled}
+                      onChange={(status: boolean) =>
+                        handleSwitchChange({ index: i, status, condition })}
+                    />
+                  </div>
                   <div class="condition-inputs">
                     <div class="key-value-pairs">
                       {#each condition.pairs as pair, pairIndex}
@@ -237,24 +243,26 @@
                               updateKeyValuePair(i, pairIndex, pair.key, pair.value);
                             }}
                           />
-                          <button
-                            class="remove-pair-btn"
+                          <Button
+                            type="danger"
+                            size="small"
                             onclick={() => removeKeyValuePair(i, pairIndex)}
                             disabled={condition.pairs.length === 1}
                           >
                             -
-                          </button>
+                          </Button>
                         </div>
                       {/each}
-                      <button
-                        class="add-pair-btn"
+                      <Button
+                        size="small"
                         onclick={() => addKeyValuePair(i)}
+                        fontSize="12px"
+                        class="add-pair-btn"
                       >
-                        + 添加键值对
-                      </button>
+                        + Add Pair
+                      </Button>
                     </div>
-                    <input
-                      type="text"
+                    <textarea
                       class="form-input remark-input"
                       placeholder="备注"
                       bind:value={condition.remark}
@@ -264,13 +272,13 @@
                           ruleStore.updateRuleConfig(selectedRule.id, config);
                         }
                       }}
-                    />
+                    ></textarea>
                   </div>
                   <div class="condition-actions">
                     <Select
                       options={[
-                        { value: "network", label: "网络模式" },
-                        { value: "mock", label: "mock模式" },
+                        { value: "network", label: "Live" },
+                        { value: "mock", label: "Mock" },
                       ]}
                       value={condition.proxyMode}
                       class_="mode-select"
@@ -282,20 +290,18 @@
                         })}
                       placeholder="选择模式"
                     />
-                    <button
-                      class="edit-response-btn"
+                    <Button
+                    fontSize="14px"
                       onclick={() => openResponseEditor(i)}
                     >
                       {condition.proxyMode === PROXY_MODE.NETWORK
-                        ? "查看返回值"
-                        : "编辑返回值"}
-                    </button>
-                    <button
-                      class="remove-btn"
+                        ? "View"
+                        : "Edit"}
+                    </Button>
+                    <DeleteButton
                       onclick={() => removeCondition(i)}
-                    >
-                      删除
-                    </button>
+                      title="删除"
+                    />
                   </div>
                 </div>
               {/each}
@@ -349,22 +355,6 @@
     height: fit-content;
   }
 
-  .form-group {
-    display: inline-flex;
-    align-items: center;
-    margin-right: 1rem;
-    margin-bottom: 0;
-    flex: 0 0 auto;
-    min-width: 200px;
-  }
-
-  .form-group label {
-    min-width: 70px;
-    margin-right: 0.5rem;
-    color: #888;
-    white-space: nowrap;
-  }
-
   .form-input {
     padding: 0.5rem;
     background-color: #2a2a2a;
@@ -374,42 +364,43 @@
     min-width: 100px;
   }
 
-  .select-input {
-    appearance: none;
-    padding: 0.5rem 2rem 0.5rem 0.5rem;
-    background-color: #2a2a2a;
-    border: 1px solid #333;
-    border-radius: 4px;
-    color: #fff;
-    cursor: pointer;
-    width: 120px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8.825L1.175 4 2.238 2.938 6 6.7l3.763-3.763L10.825 4z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.5rem center;
-    background-size: 12px;
-  }
-
-  .select-input:hover {
-    border-color: #444;
-    background-color: #333;
-  }
-
-  .select-input:focus {
-    outline: none;
-    border-color: #1890ff;
-    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
-  }
-
   .conditions-container {
     margin-top: 1rem;
     width: 100%;
   }
 
+  fieldset {
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+
+  legend {
+    color: #888;
+    padding: 0 0.5rem;
+    font-size: 0.9rem;
+  }
+
   .condition-row {
     display: flex;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem 0;
+    align-items: flex-start;
+    border-bottom: 1px solid #333;
+  }
+
+  .condition-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .condition-row:first-child {
+    padding-top: 0;
+  }
+
+  :global(.add-pair-btn) {
+    width: 100%;
+    margin-top: 0.25rem;
   }
 
   .condition-inputs {
@@ -420,66 +411,21 @@
 
   .condition-actions {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.5rem;
     margin-left: auto;
+    margin-top: 4px;
   }
-  .remark-input,
-  .condition-input {
+  .remark-input {
     width: 200px;
+    height: 72px;
+    resize: none;
     border-color: gray;
   }
 
-  .remove-btn {
-    flex-shrink: 0;
-    padding: 0.5rem;
-    background-color: #ff4d4f;
-    border: none;
-    border-radius: 4px;
-    color: white;
-    cursor: pointer;
-  }
-
-  .remove-btn:hover {
-    background-color: #ff7875;
-  }
-
-  .remove-btn:disabled {
-    background-color: #666;
-    cursor: not-allowed;
-  }
-
-  .add-btn {
-    margin-top: 0;
-    padding: 0.5rem;
-    background-color: #1890ff;
-    border: none;
-    border-radius: 4px;
-    color: white;
-    cursor: pointer;
-    width: auto;
-    height: 38px;
-    display: flex;
-    align-items: center;
-  }
-
-  .add-btn:hover {
-    background-color: #40a9ff;
-  }
-
-  .edit-response-btn {
-    flex-shrink: 0;
-    padding: 0.5rem;
-    background-color: #1890ff;
-    border: none;
-    border-radius: 4px;
-    color: white;
-    cursor: pointer;
-    margin-right: 0.5rem;
-  }
-
-  .edit-response-btn:hover {
-    background-color: #40a9ff;
+  .condition-input {
+    width: 200px;
+    border-color: gray;
   }
 
   .condition-input {
@@ -497,41 +443,6 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-  }
-
-  .add-pair-btn {
-    padding: 0.25rem 0.5rem;
-    background-color: #52c41a;
-    border: none;
-    border-radius: 4px;
-    color: white;
-    cursor: pointer;
-    font-size: 0.875rem;
-    align-self: flex-start;
-  }
-
-  .add-pair-btn:hover {
-    background-color: #73d13d;
-  }
-
-  .remove-pair-btn {
-    padding: 0.25rem 0.5rem;
-    background-color: #ff4d4f;
-    border: none;
-    border-radius: 4px;
-    color: white;
-    cursor: pointer;
-    font-size: 0.875rem;
-    min-width: 30px;
-  }
-
-  .remove-pair-btn:hover {
-    background-color: #ff7875;
-  }
-
-  .remove-pair-btn:disabled {
-    background-color: #666;
-    cursor: not-allowed;
   }
 
   .no-selection {

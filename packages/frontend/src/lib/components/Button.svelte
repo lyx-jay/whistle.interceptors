@@ -4,16 +4,18 @@
   export let disabled = false;
   export let loading = false;
   export let block = false;
+  export let fontSize: string | undefined = undefined;
 </script>
 
 <button
   class="btn {type} {size} {block ? 'block' : ''}"
+  style={fontSize ? `font-size: ${fontSize}` : ''}
   {disabled}
   on:click
   {...$$restProps}
 >
   {#if loading}
-    <span class="loading" />
+    <span class="loading"></span>
   {/if}
   <slot />
 </button>
@@ -61,30 +63,33 @@
 
   /* 类型变体 */
   .primary {
-    background-color: #1890ff;
-    color: white;
+    background-color: #ffffff;
+    color: #000000;
   }
 
   .primary:hover:not(:disabled) {
-    background-color: #40a9ff;
+    background-color: #f4f4f5;
   }
 
   .secondary {
-    background-color: #666;
-    color: white;
+    background-color: #27272a;
+    color: #ffffff;
+    border: 1px solid #3f3f46;
   }
 
   .secondary:hover:not(:disabled) {
-    background-color: #777;
+    background-color: #3f3f46;
   }
 
   .danger {
-    background-color: #ff4d4f;
-    color: white;
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.5);
   }
 
   .danger:hover:not(:disabled) {
-    background-color: #ff7875;
+    background-color: rgba(239, 68, 68, 0.3);
+    border-color: #ef4444;
   }
 
   /* 块级按钮 */
